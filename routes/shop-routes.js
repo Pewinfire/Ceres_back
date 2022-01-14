@@ -2,21 +2,21 @@ const express = require("express");
 
 const { check } = require("express-validator");
 
-const marketControllers = require("../controllers/market-controllers");
-const market = require("../models/market");
+const shopControllers = require("../controllers/shop-controllers");
+const shop = require("../models/shop");
 
 const router = express.Router();
 
-router.get("/", marketControllers.getMarkets);
+router.get("/", shopControllers.getShops);
 
 router.post(
     "/",
     [
       check("name").not().isEmpty(),
-      check("postalCode").isLength(5),
-      check("address").not().isEmpty(),
+      check("description").not().isEmpty(),
+      check("location").not().isEmpty(),
     ],
-  marketControllers.createMarket
+  shopControllers.createShop
 );
 
 /* router.patch(

@@ -3,7 +3,7 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 
 const marketRoutes = require("./routes/market-routes");
-
+const shopRoutes = require("./routes/shop-routes");
 const usersRoutes = require("./routes/user-routes");
 const HttpError = require("./models/http-error");
 
@@ -25,6 +25,7 @@ app.use((req, res, next) => {
 
 
 app.use('/api/market', marketRoutes); 
+app.use('/api/shop', shopRoutes); 
 app.use("/api/users", usersRoutes);
 
 app.use((req, res, next) => {
