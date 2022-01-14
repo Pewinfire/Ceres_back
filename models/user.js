@@ -13,7 +13,7 @@ const userSchema = new Schema({
   //userType: { type: mongoose.Types.ObjectId, required: true, ref: "UserType" },
   cart: [{ type: mongoose.Types.ObjectId, ref: "Cart" }],
   bills: [{ type: mongoose.Types.ObjectId, ref: "Bill" }],
-  shop: [{ type: mongoose.Types.ObjectId, ref: "Shop" }],
+  shops: [{ type: mongoose.Types.ObjectId, ref: "Shop" }],
 });
 
 userSchema.plugin(uniqueValidator); // validar email (ya existe/no existe)

@@ -19,6 +19,30 @@ const getMarkets = async (req, res, next) => {
   });
 };
 
+const getMarketById = async (req, res, next) => {
+  const marketId = req.params.mid;
+  let market;
+  try {
+    market = await Market.findById(marketId);
+  } catch (err) {
+    const error = new HttpError(
+      "Something went wrong, could not find a market",
+      500
+    );
+    return next(error);
+  }
+
+  if (!market) {
+    const error = new HttpError(
+      "Could not find a market for the provided id.",
+      404
+    );
+    return next(error);
+  }
+
+  res.json({ market: market.toObject({ getters: true }) });
+};
+
 const createMarket = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -71,3 +95,4 @@ const createMarket = async (req, res, next) => {
 
 exports.getMarkets = getMarkets;
 exports.createMarket = createMarket;
+exports.getMarketById = getMarketById;

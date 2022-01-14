@@ -57,7 +57,7 @@ const signup = async (req, res, next) => {
       "https://pbs.twimg.com/profile_images/1009018578752897025/LLL98VAk_400x400.jpg",
     cart: [],
     bill: [],
-    shop: [],
+    shops: [],
   });
 
   try {

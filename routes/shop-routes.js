@@ -3,29 +3,37 @@ const express = require("express");
 const { check } = require("express-validator");
 
 const shopControllers = require("../controllers/shop-controllers");
-const shop = require("../models/shop");
 
 const router = express.Router();
 
 router.get("/", shopControllers.getShops);
 
+router.get("/:shid", shopControllers.getShopById);
+
+router.get("/market/:mid", shopControllers.getShopByMarketId);
+
+router.get("/owner/:oid", shopControllers.getShopByOwnerId);
+
 router.post(
-    "/",
-    [
-      check("name").not().isEmpty(),
-      check("description").not().isEmpty(),
-      check("location").not().isEmpty(),
-    ],
+  "/",
+  [
+    check("name").not().isEmpty(),
+    check("description").not().isEmpty(),
+    check("location").not().isEmpty(),
+  ],
   shopControllers.createShop
 );
 
-/* router.patch(
-  "/:mid",
-  [check("title").not().isEmpty(), check("description").isLength({ min: 5 })],  // solo la imagen 
-  placesControllers.updatePlaceById
+router.patch(
+  "/:shid",
+  [
+    check("name").not().isEmpty(),
+    check("description").not().isEmpty(),
+    check("location").not().isEmpty(),
+  ], // solo la imagen
+  shopControllers.updateShopById
 ); // validacion
 
-
-router.delete("/:pid", placesControllers.deletePlaceById);*/
+router.delete("/:shid", shopControllers.deleteShopById);
 
 module.exports = router;

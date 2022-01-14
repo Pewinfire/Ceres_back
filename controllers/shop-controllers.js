@@ -135,8 +135,8 @@ const createShop = async (req, res, next) => {
     const sess = await mongoose.startSession();
     sess.startTransaction();
     await createdShop.save({ session: sess });
-    user.shop.push(createdShop); 
-    market.shop.push(createdShop); 
+    user.shops.push(createdShop); 
+    market.shops.push(createdShop); 
     await user.save({ session: sess });
     await market.save({ session: sess });
     await sess.commitTransaction();
@@ -145,12 +145,12 @@ const createShop = async (req, res, next) => {
     return next(error);
   }
 
-  res.status(201).json({ shop: createdShop }); //exito en sv
+  res.status(201).json({ shop: createdShop.toObject({ getters: true }) }); //exito en sv
 };
 
 /////////////////////////////////////////Update//////////////////////////////
 
-const updatePlaceById = async (req, res, next) => {
+const updateShopById = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     console.log(errors);
@@ -159,72 +159,72 @@ const updatePlaceById = async (req, res, next) => {
     );
   }
 
-  const { title, description } = req.body;
-  const placeId = req.params.pid;
+  const {name, description, location} = req.body;
+  const shopId = req.params.shid;
 
-  let place;
+  let shop;
   try {
-    place = await Place.findById(placeId);
+    shop = await Shop.findById(shopId);
   } catch (err) {
     const error = new HttpError(
-      "Something went wrong, could not update place",
+      "Something went wrong, could not update shop",
+      500
+    );
+    return next(error);
+  }
+//img
+  shop.name = name;
+  shop.description = description;
+
+  try {
+    await shop.save();
+  } catch (err) {
+    const error = new HttpError(
+      "Something went wrong, could not update shop",
       500
     );
     return next(error);
   }
 
-  place.title = title;
-  place.description = description;
-
-  try {
-    await place.save();
-  } catch (err) {
-    const error = new HttpError(
-      "Something went wrong, could not update place",
-      500
-    );
-    return next(error);
-  }
-
-  res.status(200).json({ place: place.toObject({ getters: true }) });
+  res.status(200).json({ shop: shop.toObject({ getters: true }) });
 };
 
 /////////////////////////////////////////Delete//////////////////////////////
 
-const deletePlaceById = async (req, res, next) => {
-  const placeId = req.params.pid;
+const deleteShopById = async (req, res, next) => {
+  const shopId = req.params.shid;
 
-  let place;
+  let shop;
   try {
-    place = await Place.findById(placeId).populate("creator"); // borrar con referencia
+    shop = await (await Shop.findById(shopId).populate("marketo owner")); // borrar con referencia
   } catch (err) {
     const error = new HttpError(
-      "Something went wrong, could not delete place.",
+      "Something went wrong, could not delete shop.",
       500
     );
     return next(error);
   }
 
-  if (!place) {
-    const error = new HttpError("Could not find a place for this id", 404); // check si existe el id
+  if (!shop) {
+    const error = new HttpError("Could not find a shop for this id", 404); // check si existe el id
     return next(error);
   }
 
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
-    await place.remove({ session: sess }); //aqui
-    place.creator.places.pull(place); //  place creator -> places
-    await place.creator.save({ session: sess }); //aqui
+    await shop.remove({ session: sess }); 
+    shop.owner.shops.pull(shop); 
+    await shop.owner.save({ session: sess }); 
     await sess.commitTransaction();
   } catch (err) {
     const error = new HttpError(
-      "Something went wrong, could not delete place.",
+      "Something went wrong, could not delete shop.",
       500
     );
     return next(error);
   }
-  res.status(200).json({ message: "Deleted place." });
+  res.status(200).json({ message: "Deleted shop." });
 };
 
 exports.getShops = getShops;
@@ -232,5 +232,5 @@ exports.getShopById = getShopById;
 exports.getShopByMarketId = getShopByMarketId;
 exports.getShopByOwnerId = getShopByOwnerId;
 exports.createShop = createShop;
-exports.updatePlaceById = updatePlaceById;
-exports.deletePlaceById = deletePlaceById;
+exports.updateShopById = updateShopById;
+exports.deleteShopById = deleteShopById;

@@ -11,7 +11,7 @@ const marketSchema = new Schema({
     lat: { type: Number, required: true },
     lng: { type: Number, required: true },
   },
-  shop: [{ type: mongoose.Types.ObjectId, ref: "Shop" }], // 1:N r
+  shops: [{ type: mongoose.Types.ObjectId, ref: "Shop" }], // 1:N r
 });
 
 module.exports = mongoose.model("Market", marketSchema);
