@@ -1,3 +1,6 @@
+const fs = require("fs");
+const path = require("path");
+
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
@@ -11,6 +14,9 @@ const app = express();
 
 app.use(bodyParser.json());
 
+
+app.use("/uploads/images", express.static(path.join("uploads", "images")));
+
 //cors
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -23,9 +29,8 @@ app.use((req, res, next) => {
   next();
 });
 
-
-app.use('/api/market', marketRoutes); 
-app.use('/api/shop', shopRoutes); 
+app.use("/api/market", marketRoutes);
+app.use("/api/shop", shopRoutes);
 app.use("/api/users", usersRoutes);
 
 app.use((req, res, next) => {
@@ -33,17 +38,23 @@ app.use((req, res, next) => {
   throw error;
 });
 
+
 app.use((error, req, res, next) => {
+  if (req.file) {
+    //rollback si lanza un fallo desde validacion de los demas campos
+    fs.unlink(req.file.path, (err) => {
+      console.log(err);
+    });
+  }
   if (res.headerSent) {
     return next(error);
   }
   res.status(error.code || 500);
   res.json({ message: error.message || "An unknown error occurred!" });
 });
-
 mongoose
   .connect(
-    "mongodb+srv://pewonfire:O7aQXJkwBEfBWDJw@cluster0.nwdex.mongodb.net/Ceres?retryWrites=true&w=majority"
+    `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.nwdex.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
   )
   .then(() => {
     app.listen(5000);

@@ -1,0 +1,10 @@
+{
+    "env":{
+        "DB_USER": "pewonfire",
+        "DB_PASSWORD": "O7aQXJkwBEfBWDJw",
+        "DB_NAME": "Ceres",
+        "GOOGLE_API_KEY": "AIzaSyBZtoxk6nxt3FvNw5Xnvk_wj9_3XvvIq9E",
+        "JWT_KEY": "private_key_1"
+    }
+
+}

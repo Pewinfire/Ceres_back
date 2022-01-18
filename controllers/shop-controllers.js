@@ -148,7 +148,6 @@ const createShop = async (req, res, next) => {
   res.status(201).json({ shop: createdShop.toObject({ getters: true }) }); //exito en sv
 };
 
-/////////////////////////////////////////Update//////////////////////////////
 
 const updateShopById = async (req, res, next) => {
   const errors = validationResult(req);
@@ -188,8 +187,6 @@ const updateShopById = async (req, res, next) => {
 
   res.status(200).json({ shop: shop.toObject({ getters: true }) });
 };
-
-/////////////////////////////////////////Delete//////////////////////////////
 
 const deleteShopById = async (req, res, next) => {
   const shopId = req.params.shid;
