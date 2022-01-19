@@ -2,7 +2,6 @@ const { validationResult } = require("express-validator");
 const getCoordsForAddress = require("../util/location");
 const HttpError = require("../models/http-error");
 const Market = require("../models/market");
-
 const getMarkets = async (req, res, next) => {
   let markets;
   try {
@@ -19,10 +18,56 @@ const getMarkets = async (req, res, next) => {
   });
 };
 
+const getMarketsNear = async (req, res, next) => {
+ /*  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(
+      new HttpError(" Invalid inputs passed, please check your data", 422)
+    );
+  }
+  const { address } = req.body; */
+  const address = req.params.addr;
+  console.log(address);
+  let coordinates;
+  let geoJson;
+  try {
+    coordinates = await getCoordsForAddress(address);
+    geoJson = {
+      type: "Point",
+      coordinates: [coordinates.lng, coordinates.lat],
+    };
+  } catch (error) {
+    return next(error);
+  }
+  console.log(geoJson);
+  let markets;
+  try {
+    
+    markets = await Market.find({
+      geoSon: {
+        $near: {
+          $maxDistance: 10000,
+          $geometry: geoJson,
+        },
+      },
+    });
+  } catch (err) {
+    const error = new HttpError(
+      err,
+      500
+    );
+    return next(error);
+  }
+  res.json({
+    markets: markets.map((market) => market.toObject({ getters: true })),
+  });
+};
+
 const getMarketById = async (req, res, next) => {
   const marketId = req.params.mid;
   let market;
   try {
+    
     market = await Market.findById(marketId);
   } catch (err) {
     const error = new HttpError(
@@ -69,8 +114,13 @@ const createMarket = async (req, res, next) => {
   }
 
   let coordinates;
+  let geoSon;
   try {
     coordinates = await getCoordsForAddress(address);
+    geoSon = {
+      type: "Point",
+      coordinates: [coordinates.lng, coordinates.lat],
+    };
   } catch (error) {
     return next(error);
   }
@@ -80,9 +130,10 @@ const createMarket = async (req, res, next) => {
     image: "https://imag.bonviveur.com/exterior-del-mercado-de-ruzafa.jpg",
     address,
     location: coordinates,
+    geoSon,
     shop: [],
   });
-
+  console.log(createdMarket.location);
   try {
     await createdMarket.save();
   } catch (err) {
@@ -94,5 +145,6 @@ const createMarket = async (req, res, next) => {
 };
 
 exports.getMarkets = getMarkets;
+exports.getMarketsNear = getMarketsNear;
 exports.createMarket = createMarket;
 exports.getMarketById = getMarketById;

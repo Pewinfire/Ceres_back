@@ -10,6 +10,7 @@ const userSchema = new Schema({
   dni: { type: String, required:true },
   phone: { type: String, required: true, maxlength: 9},
   image: { type: String, required: true },
+  address:{ type: String, required: true },
   //userType: { type: mongoose.Types.ObjectId, required: true, ref: "UserType" },
   cart: [{ type: mongoose.Types.ObjectId, ref: "Cart" }],
   bills: [{ type: mongoose.Types.ObjectId, ref: "Bill" }],

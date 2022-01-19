@@ -13,8 +13,13 @@ router.post(
   fileUpload.single("image"),
   [
     check("name").not().isEmpty(),
+    check("lastname").not().isEmpty(),
+    check("email").normalizeEmail().isEmail(), 
     check("password").isLength({ min: 6 }),
-    check("email").normalizeEmail().isEmail(), //
+    check("dni").not().isEmpty(),
+    check("phone").isNumeric(),
+    check("address").not().isEmpty(),
+    //
   ],
   usersControllers.signup
 );

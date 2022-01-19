@@ -8,7 +8,7 @@ const User = require("../models/user");
 const getUsers = async (req, res, next) => {
   let users;
   try {
-    users = await User.find({}, "-password - cart -bill -shops"); 
+    users = await User.find({}, "-password -cart -bill -shops"); 
   } catch (err) {
     const error = new HttpError(
       "Fetching users failed, please try again.",
@@ -28,7 +28,7 @@ const signup = async (req, res, next) => {
       new HttpError(" Invalid inputs passed, please check your data", 422)
     );
   }
-  const { name, lastname, email, password, phone, dni } = req.body;
+  const { name, lastname, email, password, phone, dni, address } = req.body;
 
   let existingUser;
   try {
@@ -66,6 +66,7 @@ const signup = async (req, res, next) => {
     phone,
     dni,
     image:  req.file.path,
+    address,
     cart: [],
     bill: [],
     shops: [],

@@ -4,9 +4,14 @@ const { check } = require("express-validator");
 
 const marketControllers = require("../controllers/market-controllers");
 
+
 const router = express.Router();
 
 router.get("/", marketControllers.getMarkets);
+
+router.get("/near/:addr",/* [
+  check("address").not().isEmpty(),
+], */ marketControllers.getMarketsNear);
 
 router.get("/:mid", marketControllers.getMarketById);
 
@@ -19,6 +24,5 @@ router.post(
   ],
   marketControllers.createMarket
 );
-
 
 module.exports = router;
