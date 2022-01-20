@@ -8,7 +8,7 @@ const User = require("../models/user");
 const getUsers = async (req, res, next) => {
   let users;
   try {
-    users = await User.find({}, "-password -cart -bill -shops"); 
+    users = await User.find({}, "-password -cart -bill -shops");
   } catch (err) {
     const error = new HttpError(
       "Fetching users failed, please try again.",
@@ -65,7 +65,7 @@ const signup = async (req, res, next) => {
     password: hashedPassword,
     phone,
     dni,
-    image:  req.file.path,
+    image: req.file.path,
     address,
     cart: [],
     bill: [],
@@ -92,7 +92,9 @@ const signup = async (req, res, next) => {
     );
     return next(error);
   }
-  res.status(201).json({ userId: createdUser.id, email: createdUser.email, token: token }); //exito en sv
+  res
+    .status(201)
+    .json({ userId: createdUser.id, email: createdUser.email, token: token }); //exito en sv
 };
 
 const login = async (req, res, next) => {
@@ -150,7 +152,7 @@ const login = async (req, res, next) => {
   res.json({
     userId: existingUser.id,
     email: existingUser.email,
-    token: token
+    token: token,
   });
 };
 

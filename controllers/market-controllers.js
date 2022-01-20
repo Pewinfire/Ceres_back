@@ -19,13 +19,7 @@ const getMarkets = async (req, res, next) => {
 };
 
 const getMarketsNear = async (req, res, next) => {
- /*  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return next(
-      new HttpError(" Invalid inputs passed, please check your data", 422)
-    );
-  }
-  const { address } = req.body; */
+
   const address = req.params.addr;
   console.log(address);
   let coordinates;
@@ -46,7 +40,7 @@ const getMarketsNear = async (req, res, next) => {
     markets = await Market.find({
       geoSon: {
         $near: {
-          $maxDistance: 10000,
+          $maxDistance:5000,
           $geometry: geoJson,
         },
       },
@@ -127,7 +121,7 @@ const createMarket = async (req, res, next) => {
   const createdMarket = new Market({
     name,
     postalCode,
-    image: "https://imag.bonviveur.com/exterior-del-mercado-de-ruzafa.jpg",
+    image: req.file.path,
     address,
     location: coordinates,
     geoSon,
