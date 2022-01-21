@@ -1,5 +1,5 @@
 const { validationResult } = require("express-validator");
-
+const fs = require("fs");
 const HttpError = require("../models/http-error");
 const Shop = require("../models/shop");
 const Market = require("../models/market");
@@ -31,7 +31,7 @@ const getShopById = async (req, res, next) => {
     shop = await Shop.findById(shopId);
   } catch (err) {
     const error = new HttpError(
-      "Something went wrong, could not find a shop", 
+      "Something went wrong, could not find a shop",
       500
     );
     return next(error);
@@ -41,7 +41,7 @@ const getShopById = async (req, res, next) => {
     const error = new HttpError(
       "Could not find a shop for the provided id.",
       404
-    ); 
+    );
     return next(error);
   }
 
@@ -53,12 +53,9 @@ const getShopByMarketId = async (req, res, next) => {
 
   let shops;
   try {
-    shops = await Shop.find({ marketo: marketId }); 
+    shops = await Shop.find({ marketo: marketId });
   } catch (err) {
-    const error = new HttpError(
-      "Fetching shops failed, please try again",
-      500
-    );
+    const error = new HttpError("Fetching shops failed, please try again", 500);
     return next(error);
   }
   if (!shops || shops.length === 0) {
@@ -68,51 +65,46 @@ const getShopByMarketId = async (req, res, next) => {
   }
   res.json({
     shops: shops.map((shop) => shop.toObject({ getters: true })),
-  }); 
+  });
 };
 
 const getShopByOwnerId = async (req, res, next) => {
-    const ownerId = req.params.oid;
-  
-    let shops;
-    try {
-      shops = await Shop.find({ owner: ownerId }); 
-    } catch (err) {
-      const error = new HttpError(
-        "Fetching shops failed, please try again",
-        500
-      );
-      return next(error);
-    }
-    if (!shops || shops.length === 0) {
-      return next(
-        new HttpError("Could not find a Shops for the provided Owner id.", 404)
-      );
-    }
-    res.json({
-      shops: shops.map((shop) => shop.toObject({ getters: true })),
-    }); 
-  };
-  
+  const ownerId = req.params.oid;
+
+  let shops;
+  try {
+    shops = await Shop.find({ owner: ownerId });
+  } catch (err) {
+    const error = new HttpError("Fetching shops failed, please try again", 500);
+    return next(error);
+  }
+  if (!shops || shops.length === 0) {
+    return next(
+      new HttpError("Could not find a Shops for the provided Owner id.", 404)
+    );
+  }
+  res.json({
+    shops: shops.map((shop) => shop.toObject({ getters: true })),
+  });
+};
+
 /////////////////////////////////////////Create//////////////////////////////
 
 const createShop = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.log(errors);
     next(new HttpError(" Invalid inputs passed, please check your data", 422));
   }
 
-  const {name, description, location, owner, marketo } = req.body;
+  const { name, description, location, owner, marketo } = req.body;
 
- 
   const createdShop = new Shop({
-    name, 
+    name,
     description,
     location,
-    image: req.file.path, 
+    image: req.file.path,
     owner,
-    marketo
+    marketo,
   });
 
   let user;
@@ -125,17 +117,20 @@ const createShop = async (req, res, next) => {
     return next(error);
   }
 
-  if (!user && !market) {
-    const error = new HttpError(" Could not find user or market for provided id", 404);
+  if (!market) {
+    const error = new HttpError(
+      " Could not find user or market for provided id",
+      404
+    );
     return next(error);
   }
 
- try {
+  try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
     await createdShop.save({ session: sess });
-    user.shops.push(createdShop); 
-    market.shops.push(createdShop); 
+    user.shops.push(createdShop);
+    market.shops.push(createdShop);
     await user.save({ session: sess });
     await market.save({ session: sess });
     await sess.commitTransaction();
@@ -147,17 +142,15 @@ const createShop = async (req, res, next) => {
   res.status(201).json({ shop: createdShop.toObject({ getters: true }) }); //exito en sv
 };
 
-
 const updateShopById = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.log(errors);
     return next(
       new HttpError(" Invalid inputs passed, please check your data", 422)
     );
   }
 
-  const {name, description, location} = req.body;
+  const { name, description, location, imageup } = req.body;
   const shopId = req.params.shid;
 
   let shop;
@@ -170,15 +163,24 @@ const updateShopById = async (req, res, next) => {
     );
     return next(error);
   }
-//img
+  //img
   shop.name = name;
   shop.description = description;
+  shop.location = location;
 
+  const imagePath = shop.image;
+  if (imageup === "true") {
+    shop.image = req.file.path;
+  }
   try {
     await shop.save();
+
+    if (imageup === "true") {
+      fs.unlink(imagePath, (err) => {});
+    }
   } catch (err) {
     const error = new HttpError(
-      "Something went wrong, could not update shop",
+      "No se ha podido actualizar el Puesto, intentelo de nuevo",
       500
     );
     return next(error);
@@ -186,13 +188,12 @@ const updateShopById = async (req, res, next) => {
 
   res.status(200).json({ shop: shop.toObject({ getters: true }) });
 };
-
 const deleteShopById = async (req, res, next) => {
   const shopId = req.params.shid;
 
   let shop;
   try {
-    shop = await (await Shop.findById(shopId).populate("marketo owner")); // borrar con referencia
+    shop = await await Shop.findById(shopId).populate("marketo owner"); // borrar con referencia
   } catch (err) {
     const error = new HttpError(
       "Something went wrong, could not delete shop.",
@@ -209,9 +210,9 @@ const deleteShopById = async (req, res, next) => {
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
-    await shop.remove({ session: sess }); 
-    shop.owner.shops.pull(shop); 
-    await shop.owner.save({ session: sess }); 
+    await shop.remove({ session: sess });
+    shop.owner.shops.pull(shop);
+    await shop.owner.save({ session: sess });
     await sess.commitTransaction();
   } catch (err) {
     const error = new HttpError(

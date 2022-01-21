@@ -29,6 +29,7 @@ router.post(
 
 router.patch(
   "/:shid",
+  fileUpload.single("image"),
   [
     check("name").not().isEmpty(),
     check("description").not().isEmpty(),
@@ -36,6 +37,7 @@ router.patch(
   ], // solo la imagen
   shopControllers.updateShopById
 ); // validacion
+
 
 router.delete("/:shid", shopControllers.deleteShopById);
 
