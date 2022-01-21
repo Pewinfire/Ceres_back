@@ -21,7 +21,7 @@ const getMarkets = async (req, res, next) => {
 
 const getMarketsNear = async (req, res, next) => {
   const address = req.params.addr;
-  console.log(address);
+
   let coordinates;
   let geoJson;
   try {
@@ -122,7 +122,7 @@ const createMarket = async (req, res, next) => {
     geoSon,
     shop: [],
   });
-  console.log(createdMarket.location);
+ 
   try {
     await createdMarket.save();
   } catch (err) {
@@ -136,7 +136,7 @@ const createMarket = async (req, res, next) => {
 const updateMarketById = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.log(errors);
+  
     return next(
       new HttpError(" Invalid inputs passed, please check your data", 422)
     );
@@ -144,6 +144,7 @@ const updateMarketById = async (req, res, next) => {
 
   const { name, postalCode, address, imageup } = req.body;
   const marketId = req.params.mid;
+
   let market;
 
   try {
@@ -184,11 +185,10 @@ const updateMarketById = async (req, res, next) => {
   }
   try {
     await market.save();
-    console.log(imagePath)
-    console.log(market.image)
+
     if (imageup === "true") {
       fs.unlink(imagePath, (err) => {
-        console.log(err);
+      
       });
     }
   } catch (err) {
