@@ -18,6 +18,17 @@ router.get(
 
 router.get("/:mid", marketControllers.getMarketById);
 
+router.patch(
+  "/:mid",
+  fileUpload.single("image"),
+  [
+    check("name").not().isEmpty(),
+    check("postalCode").isLength(5),
+    check("address").not().isEmpty(),
+  ],
+  marketControllers.updateMarketById
+);
+
 router.post(
   "/",
   fileUpload.single("image"),

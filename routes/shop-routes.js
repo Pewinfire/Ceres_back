@@ -6,6 +6,8 @@ const shopControllers = require("../controllers/shop-controllers");
 
 const router = express.Router();
 
+const fileUpload = require("../middleware/file-upload");
+
 router.get("/", shopControllers.getShops);
 
 router.get("/:shid", shopControllers.getShopById);
@@ -16,6 +18,7 @@ router.get("/owner/:oid", shopControllers.getShopByOwnerId);
 
 router.post(
   "/",
+  fileUpload.single("image"),
   [
     check("name").not().isEmpty(),
     check("description").not().isEmpty(),

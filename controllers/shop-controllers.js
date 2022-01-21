@@ -53,7 +53,7 @@ const getShopByMarketId = async (req, res, next) => {
 
   let shops;
   try {
-    shops = await Shop.find({ market: marketId }); 
+    shops = await Shop.find({ marketo: marketId }); 
   } catch (err) {
     const error = new HttpError(
       "Fetching shops failed, please try again",
@@ -110,8 +110,7 @@ const createShop = async (req, res, next) => {
     name, 
     description,
     location,
-    image:
-      "https://www.visitvalencia.com/sites/default/files/styles/gallery_default/public/media/media-images/images/Mercado-de-Ruzafa-VV-02649_1024-%20Foto_Estudio_Calpena.jpg?itok=3aHaVdzS",
+    image: req.file.path, 
     owner,
     marketo
   });
