@@ -3,6 +3,8 @@ const { validationResult } = require("express-validator");
 const getCoordsForAddress = require("../util/location");
 const HttpError = require("../models/http-error");
 const Market = require("../models/market");
+
+
 const getMarkets = async (req, res, next) => {
   let markets;
   try {
