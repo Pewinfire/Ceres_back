@@ -9,17 +9,6 @@ const router = express.Router();
 router.get("/", categoryControllers.getCategories);
 
 /* router.get("/:cid", categoryControllers.getCategoryById); */
-/* 
-router.patch(
-  "/:mid",
-  fileUpload.single("image"),
-  [
-    check("name").not().isEmpty(),
-    check("postalCode").isLength(5),
-    check("address").not().isEmpty(),
-  ],
-  marketControllers.updateMarketById
-); */
 
 router.post(
   "/",
@@ -27,5 +16,13 @@ router.post(
   [check("name").not().isEmpty()],
   categoryControllers.createCategory
 );
+router.patch(
+  "/:cid",
+/*   fileUpload.single("image"), */
+  [check("name").not().isEmpty()],
+  categoryControllers.updateCategoryById
+);
+
+router.delete("/:cid", categoryControllers.deleteCategoryById);
 
 module.exports = router;

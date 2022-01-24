@@ -3,9 +3,9 @@ const fs = require("fs");
 const HttpError = require("../models/http-error");
 const Product = require("../models/product");
 const Category = require("../models/category");
-
+const Shop = require("../models/shop");
 const mongoose = require("mongoose");
-const { populate } = require("../models/product");
+
 /////////////////////////////////////////Get//////////////////////////////
 
 const getProducts = async (req, res, next) => {
@@ -106,15 +106,18 @@ const createProduct = async (req, res, next) => {
     next(new HttpError(" Invalid inputs passed, please check your data", 422));
   }
 
-  const { name, categories } = req.body;
+  const { name, categories, shop } = req.body;
 
   const createdProduct = new Product({
     name,
     categories,
+    shop,
   });
   let cats;
+  let shopo;
   try {
     cats = await Category.find({ _id: { $in: categories } });
+    shopo = await Shop.findById(shop);
   } catch (err) {
     const error = new HttpError(err, 500);
     return next(error);
@@ -128,10 +131,13 @@ const createProduct = async (req, res, next) => {
     return next(error);
   }
   let category;
+
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
     await createdProduct.save({ session: sess });
+    shopo.products.push(createdProduct);
+    await shopo.save({ session: sess });
     for (let cat of cats) {
       category = await Category.findById(cat);
       category.products.push(createdProduct);
@@ -255,16 +261,13 @@ const deleteProductById = async (req, res, next) => {
 
   const imagePath = product.image;
 */
-  let catRemove;
 
-  console.log(product.categories);
   let category;
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
     for (let cat of product.categories) {
       category = await Category.findById(cat);
-      console.log(category)
       category.products.pull(product);
       await category.save({ session: sess });
     }
@@ -283,6 +286,5 @@ exports.getProductById = getProductById;
 exports.createProduct = createProduct;
 exports.getProductByCategoryId = getProductByCategoryId;
 exports.getProductByShopId = getProductByShopId;
-
 exports.updateProductById = updateProductById;
 exports.deleteProductById = deleteProductById;
