@@ -29,7 +29,7 @@ router.patch(
   [check("name").not().isEmpty()], // solo la imagen
   productControllers.updateProductById
 );
-/* 
-router.delete("/:shid", shopControllers.deleteShopById);  */
+
+router.delete("/:pid", productControllers.deleteProductById); 
 
 module.exports = router;

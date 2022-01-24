@@ -174,7 +174,6 @@ const updateShopById = async (req, res, next) => {
   }
   try {
     await shop.save();
-
     if (imageup === "true") {
       fs.unlink(imagePath, (err) => {});
     }

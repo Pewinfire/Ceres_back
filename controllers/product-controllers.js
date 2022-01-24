@@ -5,14 +5,13 @@ const Product = require("../models/product");
 const Category = require("../models/category");
 
 const mongoose = require("mongoose");
-const user = require("../../../MERN/udemy cursos/Yourplaces/Yourplaces_bck/models/user");
-
+const { populate } = require("../models/product");
 /////////////////////////////////////////Get//////////////////////////////
 
 const getProducts = async (req, res, next) => {
   let products;
   try {
-    products = await Product.find({});
+    products = await Product.find().populate("categories");
   } catch (err) {
     const error = new HttpError(
       "Fetching puestos failed, please try again.",
@@ -20,6 +19,7 @@ const getProducts = async (req, res, next) => {
     );
     return next(error);
   }
+
   res.json({
     products: products.map((products) => products.toObject({ getters: true })),
   });
@@ -114,11 +114,7 @@ const createProduct = async (req, res, next) => {
   });
   let cats;
   try {
-    cats = await Promise.all(
-      categories.map(async (category) => {
-        return await Category.findById(category);
-      })
-    );
+    cats = await Category.find({ _id: { $in: categories } });
   } catch (err) {
     const error = new HttpError(err, 500);
     return next(error);
@@ -131,7 +127,6 @@ const createProduct = async (req, res, next) => {
     );
     return next(error);
   }
-
   let category;
   try {
     const sess = await mongoose.startSession();
@@ -160,7 +155,7 @@ const updateProductById = async (req, res, next) => {
   }
 
   const { name, categories } = req.body;
-  const productId = req.params.shid;
+  const productId = req.params.pid;
 
   let product;
   try {
@@ -173,40 +168,72 @@ const updateProductById = async (req, res, next) => {
     return next(error);
   }
 
-
-  let cats = [...new Set(categories)];
-  console.log(categories)
-  /* 
+  /*   if (product.creator.toString() !== req.userData.userId) {
+    // autorizacion  via token
+    const error = new HttpError("You are not allowed to edit the post", 401);
+    return next(error);
+  } */
   product.name = name;
-  product.description = description;
-  product.location = location;
-
-  const imagePath = product.image;
-  if (imageup === "true") {
-    product.image = req.file.path;
-  }
   try {
-    await product.save();
-
-    if (imageup === "true") {
-      fs.unlink(imagePath, (err) => {});
-    }
+    cats = await Category.find({ _id: { $in: categories } });
   } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+  if (!cats && cats.length === 0 && cats.length !== categories.length) {
     const error = new HttpError(
-      "No se ha podido actualizar el Puesto, intentelo de nuevo",
-      500
+      " Could not find a category for provided id",
+      404
     );
     return next(error);
   }
+  let catAd;
+  let catAdd;
+  let catRemove;
 
-  res.status(200).json({ product: product.toObject({ getters: true }) }); */
+  try {
+    catRemove = await product.categories.filter(
+      (cat) => !categories.includes(cat.toString())
+    );
+    catAd = await categories.filter(
+      (cat) => !product.categories.toString().includes(cat)
+    );
+    catAdd = catAd.map((s) => mongoose.Types.ObjectId(s));
+  } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+
+  product.categories = cats;
+
+  try {
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    await product.save({ session: sess });
+    for (let catR of catRemove) {
+      category = await Category.findById(catR);
+      category.products.pull(product);
+      await category.save({ session: sess });
+    }
+    for (let catA of catAdd) {
+      category = await Category.findById(catA);
+      category.products.push(product);
+      await category.save({ session: sess });
+    }
+    await sess.commitTransaction();
+  } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+  res.status(200).json({ product: product.toObject({ getters: true }) });
 };
-/* const deleteProductById = async (req, res, next) => {
-  const productId = req.params.shid;
+
+const deleteProductById = async (req, res, next) => {
+  const productId = req.params.pid;
 
   let product;
   try {
-    product = await await Product.findById(productId).populate("marketo owner"); // borrar con referencia
+    product = await Product.findById(productId);
   } catch (err) {
     const error = new HttpError(
       "Something went wrong, could not delete product.",
@@ -220,22 +247,36 @@ const updateProductById = async (req, res, next) => {
     return next(error);
   }
 
+  /*   if (product.creator.id !== req.userData.userId) {
+    // autorizacion  via token
+    const error = new HttpError("You are not allowed to delete the post", 401);
+    return next(error);
+  } 
+
+  const imagePath = product.image;
+*/
+  let catRemove;
+
+  console.log(product.categories);
+  let category;
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
+    for (let cat of product.categories) {
+      category = await Category.findById(cat);
+      console.log(category)
+      category.products.pull(product);
+      await category.save({ session: sess });
+    }
     await product.remove({ session: sess });
-    product.owner.products.pull(product);
-    await product.owner.save({ session: sess });
     await sess.commitTransaction();
   } catch (err) {
-    const error = new HttpError(
-      "Something went wrong, could not delete product.",
-      500
-    );
+    const error = new HttpError(err, 500);
     return next(error);
   }
+
   res.status(200).json({ message: "Deleted product." });
-}; */
+};
 
 exports.getProducts = getProducts;
 exports.getProductById = getProductById;
@@ -244,4 +285,4 @@ exports.getProductByCategoryId = getProductByCategoryId;
 exports.getProductByShopId = getProductByShopId;
 
 exports.updateProductById = updateProductById;
-/* exports.deleteProductById = deleteProductById;  */
+exports.deleteProductById = deleteProductById;
