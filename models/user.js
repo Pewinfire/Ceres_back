@@ -12,18 +12,19 @@ const userSchema = new Schema({
   image: { type: String, required: true },
   address: { type: String, required: true },
   //userType: { type: mongoose.Types.ObjectId, required: true, ref: "UserType" },
-  cart: {
+/*   cart: {
     items: [
       {
         productId: {
           type: Schema.Types.ObjectId,
           ref: "Product",
-          required: true,
+         
         },
-        quantity: { type: Number, required: true },
+        quantity: { type: Number },
       },
     ],
-  },
+  }, */
+  cart: [{ type: mongoose.Types.ObjectId, ref: "Cart" }],
   bills: [{ type: mongoose.Types.ObjectId, ref: "Bill" }],
   shops: [{ type: mongoose.Types.ObjectId, ref: "Shop" }],
 });

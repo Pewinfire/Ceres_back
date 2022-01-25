@@ -10,7 +10,7 @@ const shopSchema = new Schema({
   owner: { type: mongoose.Types.ObjectId, required: true, ref: "User" },
   marketo: { type: mongoose.Types.ObjectId, required: true, ref: "Market" },
   products: [{ type: mongoose.Types.ObjectId, ref: "Product" }],
-  active: { type: Boolean },
+  /* active: { type: Boolean }, */
 });
 
 module.exports = mongoose.model("Shop", shopSchema);

@@ -135,7 +135,7 @@ const createShop = async (req, res, next) => {
     await market.save({ session: sess });
     await sess.commitTransaction();
   } catch (err) {
-    const error = new HttpError(market.shop, 500);
+    const error = new HttpError(err, 500);
     return next(error);
   }
 
