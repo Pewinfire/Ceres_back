@@ -4,11 +4,15 @@ const Schema = mongoose.Schema;
 
 const productSchema = new Schema({
   name: { type: String, required: true },
-  /* description: { type: String, required: true },
-  image: { type: String },
-  shop: { type: mongoose.Types.ObjectId, required: true, ref: "Shop" },
+  description: { type: String, required: true },
+  image: { type: String, required: true },
+  stats: {
+    price: { type: Number, required: true },
+    stock: { type: Number },
+    discount: { type: Number },
+    active: { type: Boolean },
+  },
   carts: [{ type: mongoose.Types.ObjectId, ref: "Cart" }],
-  sales:  [{ type: mongoose.Types.ObjectId, ref: "Sale" }], // 1:N relacion */
   categories: [{ type: mongoose.Types.ObjectId, ref: "Category" }],
   shop: { type: mongoose.Types.ObjectId, required: true, ref: "Shop" },
 });

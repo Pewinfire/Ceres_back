@@ -8,14 +8,13 @@ const mongoose = require("mongoose");
 const marketRoutes = require("./routes/market-routes");
 const shopRoutes = require("./routes/shop-routes");
 const usersRoutes = require("./routes/user-routes");
-const categoryRoutes = require("./routes/category-routes")
-const productRoutes = require("./routes/product-routes")
+const categoryRoutes = require("./routes/category-routes");
+const productRoutes = require("./routes/product-routes");
 const HttpError = require("./models/http-error");
 
 const app = express();
 
 app.use(bodyParser.json());
-
 
 app.use("/uploads/images", express.static(path.join("uploads", "images")));
 
@@ -34,18 +33,16 @@ app.use((req, res, next) => {
 app.use("/api/market", marketRoutes);
 app.use("/api/shop", shopRoutes);
 app.use("/api/users", usersRoutes);
-app.use("/api/category", categoryRoutes)
-app.use("/api/product", productRoutes)
+app.use("/api/category", categoryRoutes);
+app.use("/api/product", productRoutes);
 
 app.use((req, res, next) => {
   const error = new HttpError("Could not find this route.", 404);
   throw error;
 });
 
-
 app.use((error, req, res, next) => {
   if (req.file) {
-    //rollback si lanza un fallo desde validacion de los demas campos
     fs.unlink(req.file.path, (err) => {
       console.log(err);
     });

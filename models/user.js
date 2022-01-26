@@ -11,22 +11,22 @@ const userSchema = new Schema({
   phone: { type: String, required: true, maxlength: 9 },
   image: { type: String, required: true },
   address: { type: String, required: true },
-  //userType: { type: mongoose.Types.ObjectId, required: true, ref: "UserType" },
-/*   cart: {
-    items: [
+  cart: {
+    cartItem: [
       {
-        productId: {
-          type: Schema.Types.ObjectId,
+        product: {
+          type: mongoose.Types.ObjectId,
+          required: true,
           ref: "Product",
-         
         },
-        quantity: { type: Number },
+        quantity: { type: Number, required: true },
       },
     ],
-  }, */
-  cart: [{ type: mongoose.Types.ObjectId, ref: "Cart" }],
-  bills: [{ type: mongoose.Types.ObjectId, ref: "Bill" }],
-  shops: [{ type: mongoose.Types.ObjectId, ref: "Shop" }],
+  },
+  reviews: [{ type: mongoose.Types.ObjectId, ref: "Review" }],
+  orders: [{ type: mongoose.Types.ObjectId, ref: "Order" }],
+  shop: { type: mongoose.Types.ObjectId, ref: "Shop" },
+  rol: { type: mongoose.Types.ObjectId, required: true, ref: "Rol" },
 });
 
 userSchema.plugin(uniqueValidator); // validar email (ya existe/no existe)

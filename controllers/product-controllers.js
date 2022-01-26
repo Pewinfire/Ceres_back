@@ -80,7 +80,7 @@ const getProductByShopId = async (req, res, next) => {
 
   let products;
   try {
-    products = await Product.find({ Shop: shopId });
+    products = await Product.find({ Shop: shopId }).populate();
   } catch (err) {
     const error = new HttpError(
       "Fetching products failed, please try again",
