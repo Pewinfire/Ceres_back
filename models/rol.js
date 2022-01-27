@@ -9,4 +9,6 @@ const rolSchema = new Schema({
   users: [{ type: mongoose.Types.ObjectId, ref: "User" }],
 });
 
+
+
 module.exports = mongoose.model("Rol", rolSchema);

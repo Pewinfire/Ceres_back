@@ -8,8 +8,9 @@ const Rol = require("../models/rol");
 const Reviews = require("../models/reviews");
 const Shop = require("../models/shop");
 const mongoose = require("mongoose");
+const checkRol = require("../util/checkRol");
 
-//user
+//SIGN UP
 
 const signup = async (req, res, next) => {
   const errors = validationResult(req);
@@ -94,8 +95,11 @@ const signup = async (req, res, next) => {
     userId: createdUser.id,
     email: createdUser.email,
     token: token,
-  }); //exito en sv
+  }); 
 };
+
+//LOGIN
+
 
 const login = async (req, res, next) => {
   const { email, password } = req.body;
@@ -158,6 +162,44 @@ const login = async (req, res, next) => {
   });
 };
 
+//UPDATE CONTROL USER(mismo) , ADMIN
+
+const getUserById = async (req, res, next) => {
+  const userId = req.params.uid;
+  let user;
+  try {
+    user = await User.findById(
+      { _id: userId },
+      "-password -cart -orders -reviews -shop "
+    );
+  } catch (err) {
+    const error = new HttpError(
+      "No se han podido obtener los datos del usuario",
+      500
+    );
+    return next(error);
+  }
+  if (!user) {
+    const error = new HttpError(
+      "No se ha encontrado un usuario para el id proporcionado.",
+      404
+    );
+    return next(error);
+  }
+
+  try {
+    await checkRol(req.userData.userId, user.id);
+  } catch (err) {
+    const error = new HttpError("Unautorizhed", 401);
+    return next(error);
+  }
+
+  res.json({ user: user.toObject({ getters: true }) });
+};
+
+
+//UPDATE CONTROL USER(mismo) , ADMIN
+
 const updateUser = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -181,12 +223,12 @@ const updateUser = async (req, res, next) => {
     return next(error);
   }
 
-  if (user.id !== req.userData.userId) {
-    // autorizacion  via token
+  try {
+    await checkRol(req.userData.userId, user.id);
+  } catch (err) {
     const error = new HttpError("Unautorizhed", 401);
     return next(error);
   }
-
   /*   let isValidPassword = false;
   try {
     isValidPassword = await bcrypt.compare(oldpassword, user.password); // no recrea el encriptado, comprueba la posibilidad de haberlo creado el. Booleano
@@ -243,10 +285,10 @@ const updateUser = async (req, res, next) => {
   res.status(200).json({ user: user.toObject({ getters: true }) });
 };
 
-// admin
+//ADMIN   //desactivada de rutas, no se va a usar
 
 const createRol = async (req, res, next) => {
-  //desactivada de rutas, no se va a usar
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return next(
@@ -271,52 +313,7 @@ const createRol = async (req, res, next) => {
   res.status(201).json({ rol: createdRol.toObject({ getters: true }) });
 };
 
-const getUserById = async (req, res, next) => {
-  const userId = req.params.uid;
-  let user;
-  try {
-    user = await User.findById(
-      { _id: userId },
-      "-password -cart -orders -reviews -shop "
-    );
-  } catch (err) {
-    const error = new HttpError(
-      "No se han podido obtener los datos del usuario",
-      500
-    );
-    return next(error);
-  }
-  if (!user) {
-    const error = new HttpError(
-      "No se ha encontrado un usuario para el id proporcionado.",
-      404
-    );
-    return next(error);
-  }
-
-  let checkRol;
-  let rol;
-  try {
-    checkRol = await User.findById(req.userData.userId);
-    rol = await Rol.findById(checkRol.rol);
-  } catch (err) {
-    const error = new HttpError(
-      "Token manipulado, se creara un registro del problema",
-      401
-    );
-    return next(error);
-  }
-  console.log(rol.isAdmin);
-  console.log(rol.isAdmin !== false);
-  if (user.id !== req.userData.userId && rol.isAdmin === false) {
-    // autorizacion  via token
-    const error = new HttpError("Unautorizhed", 401);
-    return next(error);
-  }
-
-  res.json({ user: user.toObject({ getters: true }) });
-};
-
+// PERMISOS EN DISEÑO/DESARROLLO
 const getUsers = async (req, res, next) => {
   let users;
   try {
@@ -328,6 +325,7 @@ const getUsers = async (req, res, next) => {
     );
     return next(error);
   }
+
   res.json({
     users: users.map((user) => user.toObject({ getters: true })),
   });
