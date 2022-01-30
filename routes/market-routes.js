@@ -6,8 +6,8 @@ const marketControllers = require("../controllers/market-controllers");
 const fileUpload = require("../middleware/file-upload");
 
 const router = express.Router();
-
-router.get("/", marketControllers.getMarkets);
+/* 
+router.get("/", marketControllers.getMarkets); */
 
 router.get(
   "/near/:addr",
@@ -17,6 +17,9 @@ router.get(
 );
 
 router.get("/:mid", marketControllers.getMarketById);
+
+router.get("/name/:page/:size/:nam", marketControllers.getMarkets);
+
 
 router.patch(
   "/:mid",

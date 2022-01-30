@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-
 const Schema = mongoose.Schema;
 
 const marketSchema = new Schema({
@@ -19,5 +18,8 @@ const marketSchema = new Schema({
 });
 
 marketSchema.index({ geoSon: "2dsphere" });
+
+
+
 
 module.exports = mongoose.model("Market", marketSchema);

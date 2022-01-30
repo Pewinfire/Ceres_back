@@ -3,21 +3,36 @@ const { validationResult } = require("express-validator");
 const getCoordsForAddress = require("../util/location");
 const HttpError = require("../models/http-error");
 const Market = require("../models/market");
-
+const getPagination = require("../util/pagination")
 
 const getMarkets = async (req, res, next) => {
+  const { limit, offset } = getPagination(req.params.page , req.params.size);
   let markets;
+  let totalItems
   try {
-    markets = await Market.find({});
+    totalItems = await Market.countDocuments({});
+    markets = await Market.find({
+      $or: [
+        { name: { $regex: req.params.nam, $options: "i" } },
+        { address: { $regex: req.params.nam, $options: "i" } },
+      ],
+    } , "-shops")
+      .skip(offset)
+      .limit(limit);
   } catch (err) {
     const error = new HttpError(
-      "Fetching markets failed, please try again.",
+      "No se han introducido caracteres válidos",
       500
     );
     return next(error);
   }
   res.json({
-    markets: markets.map((market) => market.toObject({ getters: true })),
+  "totalPages": Math.ceil(markets.length / (limit -1)),
+  "totalItems": totalItems,
+  "limit": limit,
+  "currentPageSize": markets.length,
+  "markets": markets.map((market) => market.toObject({ getters: true }))
+  
   });
 };
 
@@ -61,10 +76,7 @@ const getMarketById = async (req, res, next) => {
   try {
     market = await Market.findById(marketId);
   } catch (err) {
-    const error = new HttpError(
-      "Something went wrong, could not find a market",
-      500
-    );
+    const error = new HttpError(err, 500);
     return next(error);
   }
 
@@ -124,7 +136,7 @@ const createMarket = async (req, res, next) => {
     geoSon,
     shop: [],
   });
- 
+
   try {
     await createdMarket.save();
   } catch (err) {
@@ -138,7 +150,6 @@ const createMarket = async (req, res, next) => {
 const updateMarketById = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-  
     return next(
       new HttpError(" Invalid inputs passed, please check your data", 422)
     );
@@ -189,9 +200,7 @@ const updateMarketById = async (req, res, next) => {
     await market.save();
 
     if (imageup === "true") {
-      fs.unlink(imagePath, (err) => {
-      
-      });
+      fs.unlink(imagePath, (err) => {});
     }
   } catch (err) {
     const error = new HttpError(
