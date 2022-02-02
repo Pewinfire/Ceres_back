@@ -21,6 +21,7 @@ router.post(
   fileUpload.single("image"),
   [
     check("name").not().isEmpty(),
+    check("type").not().isEmpty(),
     check("description").not().isEmpty(),
     check("location").not().isEmpty(),
   ],

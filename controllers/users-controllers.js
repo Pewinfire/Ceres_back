@@ -95,11 +95,10 @@ const signup = async (req, res, next) => {
     userId: createdUser.id,
     email: createdUser.email,
     token: token,
-  }); 
+  });
 };
 
 //LOGIN
-
 
 const login = async (req, res, next) => {
   const { email, password } = req.body;
@@ -197,7 +196,6 @@ const getUserById = async (req, res, next) => {
   res.json({ user: user.toObject({ getters: true }) });
 };
 
-
 //UPDATE CONTROL USER(mismo) , ADMIN
 
 const updateUser = async (req, res, next) => {
@@ -288,7 +286,6 @@ const updateUser = async (req, res, next) => {
 //ADMIN   //desactivada de rutas, no se va a usar
 
 const createRol = async (req, res, next) => {
-
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return next(
@@ -317,7 +314,7 @@ const createRol = async (req, res, next) => {
 const getUsers = async (req, res, next) => {
   let users;
   try {
-    users = await User.find({}, "-password -cart -bill -shops");
+    users = await User.find({}, "-password -cart -bill -shops").populate("rol" , "rol -_id id");
   } catch (err) {
     const error = new HttpError(
       "Fetching users failed, please try again.",
@@ -331,9 +328,112 @@ const getUsers = async (req, res, next) => {
   });
 };
 
+const getVendors = async (req, res, next) => {
+  try {
+    await checkRol(req.userData.userId, "1231231232");
+  } catch (err) {
+    const error = new HttpError("Unautorizhed", 401);
+    return next(error);
+  }
+  let users;
+  try {
+    users = await User.find(
+      { rol: "61f139f39f9766acbd29b447" },
+      "-password -cart -bill -shops"
+    );
+  } catch (err) {
+    const error = new HttpError(
+      "Fetching users failed, please try again.",
+      500
+    );
+    return next(error);
+  }
+
+  res.json({
+    users: users.map((user) => user.toObject({ getters: true })),
+  });
+};
+
+const getAuth = async (req, res, next) => {
+  let checkRol;
+  let rol;
+  try {
+    checkRol = await User.findById(req.userData.userId);
+    rol = await Rol.findById(checkRol.rol);
+  } catch (err) {
+    const error = new HttpError(err, 401);
+    return next(error);
+  }
+  let Authorization;
+  if (rol.isAdmin === true) {
+    Authorization = "isAdmin";
+  }
+  if (rol.isSeller === true) {
+    Authorization = "isSeller";
+  }
+  if (rol.isAdmin === false && rol.isSeller === false) {
+    Authorization = "isClient";
+  }
+
+  res.json({ Authorization });
+};
+
+const setSeller = async (req, res, next) => {
+/*   try {
+    await checkRol(req.userData.userId, "1231231232");
+  } catch (err) {
+    const error = new HttpError("Unautorizhed", 401);
+    return next(error);
+  } */
+  const { userId } = req.body;
+  let user;
+  try {
+    user = await User.findById(userId);
+  } catch (err) {
+    const error = new HttpError(
+      "Algo ha ido mal, no se ha podido actualizar el usuario, intentelo de nuevo",
+      500
+    );
+    return next(error);
+  }
+  let newRol;
+  let oldRol = user.rol;
+  let ifSeller = user.rol.toString() === "61f139f39f9766acbd29b447" ? "61f139ed9f9766acbd29b445" : "61f139f39f9766acbd29b447"
+  try {
+    newRol = await Rol.findById(ifSeller);
+    oldRol = await Rol.findById(oldRol);
+  } catch (err) {
+    const error = new HttpError(
+      "Algo ha ido mal, no se ha podido actualizar el usuario, intentelo de nuevo",
+      500
+    );
+    return next(error);
+  }
+  user.rol = newRol;
+  console.log(newRol, oldRol)
+  try {
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    await await user.save({ session: sess });
+    oldRol.users.pull(user);
+    await oldRol.save({ session: sess });
+    newRol.users.push(user);
+    await newRol.save({ session: sess });
+    await sess.commitTransaction();
+  } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+
+  res.status(200).json({ user: user.toObject({ getters: true }) });
+};
+
 exports.createRol = createRol;
 exports.getUserById = getUserById;
 exports.updateUser = updateUser;
 exports.getUsers = getUsers;
+exports.getVendors = getVendors;
 exports.signup = signup;
 exports.login = login;
+exports.getAuth = getAuth;
+exports.setSeller = setSeller;

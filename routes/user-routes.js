@@ -28,10 +28,19 @@ router.post(
 
 router.post("/login", usersControllers.login);
 
+router.patch(
+  "/setrol/setseller",
+  [
+    check("userId").not().isEmpty(),
+  ],
+  usersControllers.setSeller
+);
+
 
 router.use(checkAuth);
+router.get("/vendors/", usersControllers.getVendors)
 router.get("/:uid", usersControllers.getUserById);
-
+router.get("/auth/checkrol", usersControllers.getAuth)
 router.patch(
   "/:uid",
   fileUpload.single("image"),

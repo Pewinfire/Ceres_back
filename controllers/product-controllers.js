@@ -112,6 +112,7 @@ const createProduct = async (req, res, next) => {
     name,
     categories,
     shop,
+  
   });
   let cats;
   let shopo;

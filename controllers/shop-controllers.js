@@ -96,15 +96,19 @@ const createShop = async (req, res, next) => {
     next(new HttpError(" Invalid inputs passed, please check your data", 422));
   }
 
-  const { name, description, location, owner, marketo } = req.body;
+  const { name, type, description, location, owner, marketo } = req.body;
 
   const createdShop = new Shop({
     name,
+    type,
     description,
     location,
+    active: false,
     image: req.file.path,
     owner,
     marketo,
+    products: [],
+    reviews: [],
   });
 
   let user;
@@ -117,6 +121,13 @@ const createShop = async (req, res, next) => {
     return next(error);
   }
 
+  if (!user) {
+    const error = new HttpError(
+      " Could not find user or market for provided id",
+      404
+    );
+    return next(error);
+  }
   if (!market) {
     const error = new HttpError(
       " Could not find user or market for provided id",
@@ -124,12 +135,14 @@ const createShop = async (req, res, next) => {
     );
     return next(error);
   }
-
+  console.log(createdShop);
+  console.log(user);
+  console.log(market)
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
     await createdShop.save({ session: sess });
-    user.shops.push(createdShop);
+    user.shop = createdShop;
     market.shops.push(createdShop);
     await user.save({ session: sess });
     await market.save({ session: sess });
