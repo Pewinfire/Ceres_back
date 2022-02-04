@@ -4,6 +4,9 @@ const HttpError = require("../models/http-error");
 const Product = require("../models/product");
 const Category = require("../models/category");
 const Shop = require("../models/shop");
+const User = require("../models/user")
+const checkRol = require("../util/checkRol");
+const getPagination = require("../util/pagination");
 const mongoose = require("mongoose");
 
 /////////////////////////////////////////Get//////////////////////////////
@@ -11,7 +14,7 @@ const mongoose = require("mongoose");
 const getProducts = async (req, res, next) => {
   let products;
   try {
-    products = await Product.find().populate("categories");
+    products = await Product.find({}).populate("categories", "name");
   } catch (err) {
     const error = new HttpError(
       "Fetching puestos failed, please try again.",
@@ -64,10 +67,7 @@ const getProductByCategoryId = async (req, res, next) => {
   }
   if (!products || products.length === 0) {
     return next(
-      new HttpError(
-        "Could not find a Products for the provided Market id.",
-        404
-      )
+      new HttpError("No se han encontrado resultados para su consulta", 404)
     );
   }
   res.json({
@@ -77,15 +77,43 @@ const getProductByCategoryId = async (req, res, next) => {
 
 const getProductByShopId = async (req, res, next) => {
   const shopId = req.params.shid;
-
+  const { limit, offset } = getPagination(req.params.page, req.params.size);
+  const ifSort = req.params.sort !== "name" ? req.params.sort : "name";
+  const ifName = req.params.sch !== "producto" ? req.params.sch : " ";
+  console.log(ifSort)
   let products;
+  let totalItems;
+  let totalProducts;
   try {
-    products = await Product.find({ Shop: shopId }).populate();
+    totalItems = await Product.countDocuments({ shop: shopId });
+    totalProducts = await Product.countDocuments({
+      $or: [
+        { name: { $regex: ifName, $options: "i" } },
+        { description: { $regex: ifName, $options: "i" } },
+        {
+          categories: {
+            $elemMatch: { name: { $regex: ifName, $options: "i" } },
+          },
+        },
+      ],
+    });
+    products = await Product.find({
+      $or: [
+        { name: { $regex: ifName, $options: "i" } },
+        { description: { $regex: ifName, $options: "i" } },
+        {
+          categories: {
+            $elemMatch: { name: { $regex: ifName, $options: "i" } },
+          },
+        },
+      ],
+    }).sort({[ifSort]: req.params.dir})
+      .populate("categories", "name")
+      .skip(offset)
+      .limit(limit);
+      
   } catch (err) {
-    const error = new HttpError(
-      "Fetching products failed, please try again",
-      500
-    );
+    const error = new HttpError(err, 500);
     return next(error);
   }
   if (!products || products.length === 0) {
@@ -94,6 +122,10 @@ const getProductByShopId = async (req, res, next) => {
     );
   }
   res.json({
+    totalPages: Math.ceil(totalProducts / limit),
+    totalItems: totalItems,
+    limit: limit,
+    currentPageSize: products.length,
     products: products.map((product) => product.toObject({ getters: true })),
   });
 };
@@ -106,13 +138,37 @@ const createProduct = async (req, res, next) => {
     next(new HttpError(" Invalid inputs passed, please check your data", 422));
   }
 
-  const { name, categories, shop } = req.body;
+  const { name, description, categorias, shop } = req.body;
 
+  let shap;
+  try {
+    shap = await Shop.findById(shop);
+  } catch (err) {
+    const error = new HttpError(
+      "Ha ocurrido un error al intentar identificar su tienda",
+      500
+    );
+    return next(error);
+  }
+  if (!shap) {
+    const error = new HttpError("Could not find a shop for this id", 404); // check si existe el id
+    return next(error);
+  }
+
+  try {
+    await checkRol(req.userData.userId, shap.owner.toString());
+  } catch (err) {
+    const error = new HttpError("Unauthorized", 404);
+    return next(err);
+  }
+
+  let categories = JSON.parse(categorias);
   const createdProduct = new Product({
     name,
+    description,
     categories,
     shop,
-  
+    image: req.file.path,
   });
   let cats;
   let shopo;
@@ -235,6 +291,56 @@ const updateProductById = async (req, res, next) => {
   res.status(200).json({ product: product.toObject({ getters: true }) });
 };
 
+const updateProductStats = async (req, res, next) => {
+
+  const {stats} = req.body;
+  const productId = req.params.pid;
+
+  let shap;
+  let user;
+  try {
+    user = await User.findById(req.userData.userId)
+    shap = await Shop.findById(user.shop);
+  } catch (err) {
+    const error = new HttpError(
+      "Ha ocurrido un error al intentar identificar su tienda",
+      500
+    );
+    return next(error);
+  }
+  if (!shap) {
+    const error = new HttpError("Could not find a shop for this id", 404); // check si existe el id
+    return next(error);
+  }
+
+  try {
+    await checkRol(req.userData.userId, shap.owner.toString());
+  } catch (err) {
+    const error = new HttpError("Unauthorized", 404);
+    return next(err);
+  }
+
+  let product;
+  try {
+    product = await Product.findById(productId);
+  } catch (err) {
+    const error = new HttpError(
+      "Something went wrong, could not update Product",
+      500
+    );
+    return next(error);
+  }
+  product.stats = stats;
+
+  try {
+    await product.save();
+  } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+  res.status(200).json({ product: product.toObject({ getters: true }) });
+};
+
 const deleteProductById = async (req, res, next) => {
   const productId = req.params.pid;
 
@@ -288,4 +394,5 @@ exports.createProduct = createProduct;
 exports.getProductByCategoryId = getProductByCategoryId;
 exports.getProductByShopId = getProductByShopId;
 exports.updateProductById = updateProductById;
+exports.updateProductStats = updateProductStats;
 exports.deleteProductById = deleteProductById;

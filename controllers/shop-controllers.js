@@ -4,6 +4,7 @@ const HttpError = require("../models/http-error");
 const Shop = require("../models/shop");
 const Market = require("../models/market");
 const User = require("../models/user");
+const checkRol = require("../util/checkRol");
 const mongoose = require("mongoose");
 
 /////////////////////////////////////////Get//////////////////////////////
@@ -236,6 +237,49 @@ const deleteShopById = async (req, res, next) => {
   res.status(200).json({ message: "Deleted shop." });
 };
 
+const openShop = async (req, res, next) => {
+  const shopId = req.params.shid;
+
+  let shop;
+  try {
+    shop = await Shop.findById(shopId);
+  } catch (err) {
+    const error = new HttpError(
+      "Something went wrong, could not update shop",
+      500
+    );
+    return next(error);
+  }
+  if (!shop) {
+    const error = new HttpError("Could not find a shop for this id", 404); // check si existe el id
+    return next(error);
+  }
+
+  try {
+    await checkRol(req.userData.userId,  shop.owner.toString());
+  } catch (err) {
+    
+    return next(err);
+  }
+
+  if (shop.active === true) {
+    shop.active = false;
+  }  else {
+    shop.active = true;
+  }
+
+  try {
+    await shop.save();
+  } catch (err) {
+    const error = new HttpError(
+      "No se ha podido actualizar el Puesto, intentelo de nuevo",
+      500
+    );
+    return next(error);
+  }
+  res.status(200).json({ message: "El estado de la tienda se ha actualizado." });
+};
+
 exports.getShops = getShops;
 exports.getShopById = getShopById;
 exports.getShopByMarketId = getShopByMarketId;
@@ -243,3 +287,4 @@ exports.getShopByOwnerId = getShopByOwnerId;
 exports.createShop = createShop;
 exports.updateShopById = updateShopById;
 exports.deleteShopById = deleteShopById;
+exports.openShop = openShop;

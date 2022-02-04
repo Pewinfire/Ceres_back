@@ -6,19 +6,22 @@ const mongoose = require("mongoose");
 async function checkRol(userDataId, userid) {
   let checkRol;
   let rol;
+  console.log(userid)
   try {
     checkRol = await User.findById(userDataId);
     rol = await Rol.findById(checkRol.rol);
   } catch (err) {
+    console.log(err)
     const error = new HttpError(
-      "Token manipulado, se creara un registro del problema",
+      err,
       401
     );
     return next(error);
   }
   if (userid !== userDataId && rol.isAdmin === false) {
     // autorizacion  via token
-    const error = new HttpError("Unautorizhed", 401);
+    console.log(userid, userDataId )
+    const error = new HttpError("aqui", 401);
     return next(error);
   }
 }

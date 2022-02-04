@@ -17,7 +17,7 @@ const getMarkets = async (req, res, next) => {
       $or: [
         { name: { $regex: ifName, $options: "i" } },
         { address: { $regex: ifName, $options: "i" } },
-      ],
+      ]
     });
     markets = await Market.find(
       {

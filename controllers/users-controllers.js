@@ -169,7 +169,7 @@ const getUserById = async (req, res, next) => {
   try {
     user = await User.findById(
       { _id: userId },
-      "-password -cart -orders -reviews -shop "
+      "-password -cart -orders -reviews "
     );
   } catch (err) {
     const error = new HttpError(
@@ -227,6 +227,7 @@ const updateUser = async (req, res, next) => {
     const error = new HttpError("Unautorizhed", 401);
     return next(error);
   }
+  
   /*   let isValidPassword = false;
   try {
     isValidPassword = await bcrypt.compare(oldpassword, user.password); // no recrea el encriptado, comprueba la posibilidad de haberlo creado el. Booleano

@@ -7,10 +7,9 @@ const productSchema = new Schema({
   description: { type: String, required: true },
   image: { type: String, required: true },
   stats: {
-    price: { type: Number, required: true },
+    price: { type: Number},
     stock: { type: Number },
-    discount: { type: Number },
-    active: { type: Boolean },
+    discount: { type: Number }
   },
   carts: [{ type: mongoose.Types.ObjectId, ref: "Cart" }],
   categories: [{ type: mongoose.Types.ObjectId, ref: "Category" }],
