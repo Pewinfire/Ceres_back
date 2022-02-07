@@ -80,7 +80,6 @@ const getProductByShopId = async (req, res, next) => {
   const { limit, offset } = getPagination(req.params.page, req.params.size);
   const ifSort = req.params.sort !== "name" ? req.params.sort : "name";
   const ifName = req.params.sch !== "producto" ? req.params.sch : " ";
-  console.log(ifSort)
   let products;
   let totalItems;
   let totalProducts;

@@ -53,5 +53,13 @@ router.patch(
   ],
   usersControllers.updateUser
 );
+router.patch(
+  "/pass/:uid",
+  [
+    check("password").not().isEmpty(),
+    check("oldPassword").not().isEmpty(),
+  ],
+  usersControllers.updatePass
+);
 
 module.exports = router;

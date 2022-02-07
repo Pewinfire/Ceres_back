@@ -429,9 +429,85 @@ const setSeller = async (req, res, next) => {
   res.status(200).json({ user: user.toObject({ getters: true }) });
 };
 
+const updatePass = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(
+      new HttpError(" Invalid inputs passed, please check your data", 422)
+    );
+  }
+  const { password, oldPassword } = req.body;
+
+  const userId = req.params.uid;
+
+  let user;
+
+  try {
+    user = await User.findById(userId);
+  } catch (err) {
+    const error = new HttpError(
+      "Algo ha ido mal, no se ha podido actualizar el usuario, intentelo de nuevo",
+      500
+    );
+    return next(error);
+  }
+
+  try {
+    await checkRol(req.userData.userId, user.id);
+  } catch (err) {
+    const error = new HttpError("Unautorizhed", 401);
+    return next(error);
+  }
+  
+   let isValidPassword = false;
+  try {
+    isValidPassword = await bcrypt.compare(oldPassword, user.password); // no recrea el encriptado, comprueba la posibilidad de haberlo creado el. Booleano
+  } catch (err) {
+    const error = new HttpError(
+      "No se ha podido comprobar la antigua contraseña, reintentelo",
+      500
+    );
+    return next(error);
+  }
+  if (!isValidPassword) {
+    const error = new HttpError(
+      "La contraseña antigua no coincide con la registrada, intentelo de nuevo",
+      401
+    );
+    return next(error);
+  }
+
+  let hashedPassword;
+  try {
+    hashedPassword = await bcrypt.hash(password, 12); // 12 salting rounds
+  } catch (err) {
+    const error = new HttpError(
+      "No se ha podido crear al usuario, intentelo de nuevo ",
+      500
+    );
+    return next(error);
+  }
+
+  user.password = hashedPassword;
+
+  try {
+    await user.save();
+
+  } catch (err) {
+    const error = new HttpError(
+      "No se ha podido actualizar el Usuario, intentelo de nuevo",
+      500
+    );
+    return next(error);
+  }
+
+  res.status(200).json({ user: user.toObject({ getters: true }) });
+};
+
 exports.createRol = createRol;
 exports.getUserById = getUserById;
 exports.updateUser = updateUser;
+exports.updatePass = updatePass;
 exports.getUsers = getUsers;
 exports.getVendors = getVendors;
 exports.signup = signup;
