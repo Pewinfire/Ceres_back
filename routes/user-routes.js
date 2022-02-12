@@ -6,7 +6,6 @@ const usersControllers = require("../controllers/users-controllers");
 const fileUpload = require("../middleware/file-upload");
 const router = express.Router();
 
-
 router.get("/", usersControllers.getUsers);
 
 //users
@@ -30,17 +29,14 @@ router.post("/login", usersControllers.login);
 
 router.patch(
   "/setrol/setseller",
-  [
-    check("userId").not().isEmpty(),
-  ],
+  [check("userId").not().isEmpty()],
   usersControllers.setSeller
 );
 
-
 router.use(checkAuth);
-router.get("/vendors/", usersControllers.getVendors)
+router.get("/vendors/", usersControllers.getVendors);
 router.get("/:uid", usersControllers.getUserById);
-router.get("/auth/checkrol", usersControllers.getAuth)
+router.get("/auth/checkrol", usersControllers.getAuth);
 router.patch(
   "/:uid",
   fileUpload.single("image"),
@@ -55,11 +51,17 @@ router.patch(
 );
 router.patch(
   "/pass/:uid",
-  [
-    check("password").not().isEmpty(),
-    check("oldPassword").not().isEmpty(),
-  ],
+  [check("password").not().isEmpty(), check("oldPassword").not().isEmpty()],
   usersControllers.updatePass
 );
+router.patch(
+  "/cart/addto",
+  [check("productId").not().isEmpty(), check("productSize").not().isEmpty()],
+  usersControllers.addaddToUserCart
+);
+
+router.patch("/cart/deleteItem/:pid", usersControllers.deleteCartItem);
+
+router.get("/cart/get", usersControllers.getUserCart);
 
 module.exports = router;

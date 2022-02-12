@@ -7,8 +7,11 @@ const User = require("../models/user");
 const Rol = require("../models/rol");
 const Reviews = require("../models/reviews");
 const Shop = require("../models/shop");
+const Help = require("../models/help-form");
 const mongoose = require("mongoose");
+const Product = require("../models/product");
 const checkRol = require("../util/checkRol");
+const user = require("../models/user");
 
 //SIGN UP
 
@@ -227,36 +230,7 @@ const updateUser = async (req, res, next) => {
     const error = new HttpError("Unautorizhed", 401);
     return next(error);
   }
-  
-  /*   let isValidPassword = false;
-  try {
-    isValidPassword = await bcrypt.compare(oldpassword, user.password); // no recrea el encriptado, comprueba la posibilidad de haberlo creado el. Booleano
-  } catch (err) {
-    const error = new HttpError(
-      "No se ha podido comprobar la antigua contraseña, reintentelo",
-      500
-    );
-    return next(error);
-  }
-  if (!isValidPassword) {
-    const error = new HttpError(
-      "La contraseña antigua no coincide con la registrada, intentelo de nuevo",
-      401
-    );
-    return next(error);
-  }
 
-  let hashedPassword;
-  try {
-    hashedPassword = await bcrypt.hash(password, 12); // 12 salting rounds
-  } catch (err) {
-    const error = new HttpError(
-      "No se ha podido crear al usuario, intentelo de nuevo ",
-      500
-    );
-    return next(error);
-  }
- */
   user.name = name;
   user.lastname = lastname;
   user.phone = phone;
@@ -315,7 +289,10 @@ const createRol = async (req, res, next) => {
 const getUsers = async (req, res, next) => {
   let users;
   try {
-    users = await User.find({}, "-password -cart -bill -shops").populate("rol" , "rol -_id id");
+    users = await User.find({}, "-password -bill -shops").populate(
+      "rol",
+      "rol -_id id"
+    );
   } catch (err) {
     const error = new HttpError(
       "Fetching users failed, please try again.",
@@ -380,12 +357,12 @@ const getAuth = async (req, res, next) => {
 };
 
 const setSeller = async (req, res, next) => {
-/*   try {
+  try {
     await checkRol(req.userData.userId, "1231231232");
   } catch (err) {
     const error = new HttpError("Unautorizhed", 401);
     return next(error);
-  } */
+  }
   const { userId } = req.body;
   let user;
   try {
@@ -399,7 +376,10 @@ const setSeller = async (req, res, next) => {
   }
   let newRol;
   let oldRol = user.rol;
-  let ifSeller = user.rol.toString() === "61f139f39f9766acbd29b447" ? "61f139ed9f9766acbd29b445" : "61f139f39f9766acbd29b447"
+  let ifSeller =
+    user.rol.toString() === "61f139f39f9766acbd29b447"
+      ? "61f139ed9f9766acbd29b445"
+      : "61f139f39f9766acbd29b447";
   try {
     newRol = await Rol.findById(ifSeller);
     oldRol = await Rol.findById(oldRol);
@@ -411,7 +391,7 @@ const setSeller = async (req, res, next) => {
     return next(error);
   }
   user.rol = newRol;
-  console.log(newRol, oldRol)
+  console.log(newRol, oldRol);
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
@@ -458,8 +438,8 @@ const updatePass = async (req, res, next) => {
     const error = new HttpError("Unautorizhed", 401);
     return next(error);
   }
-  
-   let isValidPassword = false;
+
+  let isValidPassword = false;
   try {
     isValidPassword = await bcrypt.compare(oldPassword, user.password); // no recrea el encriptado, comprueba la posibilidad de haberlo creado el. Booleano
   } catch (err) {
@@ -492,7 +472,6 @@ const updatePass = async (req, res, next) => {
 
   try {
     await user.save();
-
   } catch (err) {
     const error = new HttpError(
       "No se ha podido actualizar el Usuario, intentelo de nuevo",
@@ -504,6 +483,240 @@ const updatePass = async (req, res, next) => {
   res.status(200).json({ user: user.toObject({ getters: true }) });
 };
 
+const addToUserCart = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(
+      new HttpError(" Invalid inputs passed, please check your data", 422)
+    );
+  }
+  const { productId, productSize } = req.body;
+
+  const userId = req.userData.userId;
+
+  let user;
+
+  try {
+    user = await User.findById(userId);
+  } catch (err) {
+    const error = new HttpError(
+      "Algo ha ido mal, no se ha podido añadir el producto a la cesta, intentelo de nuevo",
+      500
+    );
+    return next(error);
+  }
+
+  try {
+    await checkRol(req.userData.userId, user.id);
+  } catch (err) {
+    const error = new HttpError("Unautorizhed", 401);
+    return next(error);
+  }
+
+  let product;
+
+  try {
+    product = await Product.findById(productId);
+  } catch (err) {
+    const error = new HttpError(
+      "Algo ha ido mal, no se ha podido encontrar el producto, pruee de nuevo",
+      500
+    );
+    return next(error);
+  }
+  let quantity = productSize;
+  if (product.stats.stock > quantity) {
+    user.cart.cartItem.push({
+      product: product,
+      quantity,
+    });
+  } else {
+    const error = new HttpError("Este producto se encuentra sin stock", 428);
+    return next(error);
+  }
+
+  try {
+    await user.save();
+  } catch (err) {
+    const error = new HttpError(
+      "No se ha podido añadir el producto al carro, intentelo de nuevo",
+      500
+    );
+    return next(error);
+  }
+
+  res.status(200).json({ user: user.toObject({ getters: true }) });
+};
+
+const contactForm = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(
+      new HttpError(" Invalid inputs passed, please check your data", 422)
+    );
+  }
+  const { subject, description } = req.body;
+  try {
+    user = await User.findById(req.userData.userId);
+  } catch (err) {
+    const error = new HttpError(
+      "No se han podido obtener los datos del usuario",
+      500
+    );
+    return next(error);
+  }
+  if (!user) {
+    const error = new HttpError(
+      "No se ha encontrado un usuario para el id proporcionado.",
+      404
+    );
+    return next(error);
+  }
+
+  try {
+    await checkRol(req.userData.userId, user.id);
+  } catch (err) {
+    const error = new HttpError("Unautorizhed", 401);
+    return next(error);
+  }
+  const createdForm = new Help({
+    subject,
+    description,
+    user: req.userData.userId,
+  });
+
+  try {
+    await createdForm.save();
+  } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+
+  res.status(201).json({ form: createdForm.toObject({ getters: true }) });
+};
+
+const getHelpFormsByUserId = async (req, res, next) => {
+  const userId = req.params.uid;
+  let forms;
+  try {
+    user = await User.findById(req.userData.userId);
+  } catch (err) {
+    const error = new HttpError(
+      "No se han podido obtener los datos del usuario",
+      500
+    );
+    return next(error);
+  }
+  if (!user) {
+    const error = new HttpError(
+      "No se ha encontrado un usuario para el id proporcionado.",
+      404
+    );
+    return next(error);
+  }
+
+  try {
+    await checkRol(req.userData.userId, user.id);
+  } catch (err) {
+    const error = new HttpError("Unautorizhed", 401);
+    return next(error);
+  }
+  try {
+    forms = await Help.find({ user: userId });
+  } catch (err) {
+    const error = new HttpError(
+      "Fetching products failed, please try again",
+      500
+    );
+    return next(error);
+  }
+  if (!forms || forms.length === 0) {
+    return next(
+      new HttpError("No se han encontrado resultados para su consulta", 404)
+    );
+  }
+  res.json({
+    forms: forms.map((form) => form.toObject({ getters: true })),
+  });
+};
+
+const getUserCart = async (req, res, next) => {
+  const userId = req.userData.userId;
+  let user;
+  try {
+    user = await User.findById({ _id: userId }, "cart").populate(
+      "cart.cartItem.product",
+      "stats.price stats.format name image"
+    );
+  } catch (err) {
+    const error = new HttpError(
+      "No se han podido obtener los datos del usuario",
+      500
+    );
+    return next(error);
+  }
+  if (!user) {
+    const error = new HttpError(
+      "No se ha encontrado un usuario para el id proporcionado.",
+      404
+    );
+    return next(error);
+  }
+
+  try {
+    await checkRol(req.userData.userId, user.id);
+  } catch (err) {
+    const error = new HttpError("Unautorizhed", 401);
+    return next(error);
+  }
+
+  res.json({ user: user.toObject({ getters: true }) });
+};
+
+const deleteCartItem = async (req, res, next) => {
+  const productId = req.params.pid;
+  const userId = req.userData.userId;
+
+  let user;
+  try {
+    user = await User.findById(userId);
+  } catch (err) {
+    const error = new HttpError(
+      err,
+      500
+    );
+    return next(error);
+  }
+
+  if (!user) {
+    const error = new HttpError("Could not find a user for this id", 404); // check si existe el id
+    return next(error);
+  }
+
+  try {
+    await checkRol(req.userData.userId, user.id);
+  } catch (err) {
+    const error = new HttpError("Unautorizhed", 401);
+    return next(error);
+  }
+
+  user.cart.cartItem = user.cart.cartItem.filter(
+    (obj) => obj.product.toString() !== productId
+  );
+
+  console.log(user.cart.cartItem.product)
+  try {
+    await user.save();
+  } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+
+  res.status(200).json({ message: "Deleted product." });
+};
+
+exports.deleteCartItem = deleteCartItem;
+exports.getUserCart = getUserCart;
 exports.createRol = createRol;
 exports.getUserById = getUserById;
 exports.updateUser = updateUser;
@@ -514,3 +727,4 @@ exports.signup = signup;
 exports.login = login;
 exports.getAuth = getAuth;
 exports.setSeller = setSeller;
+exports.addaddToUserCart = addToUserCart;

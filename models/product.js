@@ -7,9 +7,15 @@ const productSchema = new Schema({
   description: { type: String, required: true },
   image: { type: String, required: true },
   stats: {
-    price: { type: Number},
+    price: { type: Number },
     stock: { type: Number },
-    discount: { type: Number }
+    discount: { type: Number },
+    size: [
+      {
+        value: { type: Number },
+      },
+    ],
+    format: { type: String },
   },
   carts: [{ type: mongoose.Types.ObjectId, ref: "Cart" }],
   categories: [{ type: mongoose.Types.ObjectId, ref: "Category" }],
