@@ -10,10 +10,8 @@ const router = express.Router();
 router.get("/", marketControllers.getMarkets); */
 
 router.get(
-  "/near/:addr",
-  /* [
-  check("address").not().isEmpty(),
-], */ marketControllers.getMarketsNear
+  "/near/:addr/:page/:size/:nam",
+   marketControllers.getMarketsNear
 );
 
 router.get("/:mid", marketControllers.getMarketById);

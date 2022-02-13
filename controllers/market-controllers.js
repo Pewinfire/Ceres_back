@@ -7,7 +7,7 @@ const getPagination = require("../util/pagination");
 
 const getMarkets = async (req, res, next) => {
   const { limit, offset } = getPagination(req.params.page, req.params.size);
-  const ifName = req.params.nam !== "merca" ? req.params.nam : " "
+  const ifName = req.params.nam !== "merca" ? req.params.nam : " ";
   let markets;
   let totalItems;
   let totalMarkets;
@@ -17,7 +17,7 @@ const getMarkets = async (req, res, next) => {
       $or: [
         { name: { $regex: ifName, $options: "i" } },
         { address: { $regex: ifName, $options: "i" } },
-      ]
+      ],
     });
     markets = await Market.find(
       {
@@ -47,10 +47,14 @@ const getMarkets = async (req, res, next) => {
 };
 
 const getMarketsNear = async (req, res, next) => {
+  const { limit, offset } = getPagination(req.params.page, req.params.size);
+  const ifName = req.params.nam !== "merca" ? req.params.nam : " ";
   const address = req.params.addr;
-
   let coordinates;
   let geoJson;
+  let markets;
+  let totalItems;
+  let totalMarkets;
   try {
     coordinates = await getCoordsForAddress(address);
     geoJson = {
@@ -61,21 +65,54 @@ const getMarketsNear = async (req, res, next) => {
     return next(error);
   }
   console.log(geoJson);
-  let markets;
   try {
-    markets = await Market.find({
-      geoSon: {
-        $near: {
-          $maxDistance: 3000,
-          $geometry: geoJson,
+    totalItems = await Market.countDocuments({});
+    totalMarkets = await Market.countDocuments({
+      $and: [
+        {
+          $or: [
+            { name: { $regex: ifName, $options: "i" } },
+            { address: { $regex: ifName, $options: "i" } },
+          ],
         },
-      },
+        {
+          $geoWithin: { $center: [[coordinates.lng, coordinates.lat], 1500] },
+        },
+      ],
     });
+
+    markets = await Market.find(
+      {
+        $and: [
+          {
+            $or: [
+              { name: { $regex: ifName, $options: "i" } },
+              { address: { $regex: ifName, $options: "i" } },
+            ],
+          },
+          {
+            geoSon: {
+              $near: {
+                $maxDistance: 3000,
+                $geometry: geoJson,
+              },
+            },
+          },
+        ],
+      },
+      "-shops"
+    )
+      .skip(offset)
+      .limit(limit);
   } catch (err) {
     const error = new HttpError(err, 500);
     return next(error);
   }
   res.json({
+    totalPages: Math.ceil(totalMarkets / limit) - 1,
+    totalItems: totalItems,
+    limit: limit,
+    currentPageSize: markets.length,
     markets: markets.map((market) => market.toObject({ getters: true })),
   });
 };
