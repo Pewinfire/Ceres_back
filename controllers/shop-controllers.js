@@ -5,6 +5,7 @@ const Shop = require("../models/shop");
 const Market = require("../models/market");
 const User = require("../models/user");
 const checkRol = require("../util/checkRol");
+const getPagination = require("../util/pagination");
 const mongoose = require("mongoose");
 
 /////////////////////////////////////////Get//////////////////////////////
@@ -51,10 +52,40 @@ const getShopById = async (req, res, next) => {
 
 const getShopByMarketId = async (req, res, next) => {
   const marketId = req.params.mid;
+  const { limit, offset } = getPagination(req.params.page, req.params.size);
+  const ifName = req.params.nam !== "shop" ? req.params.nam : " ";
+  let totalItems;
+  let totalShops;
 
   let shops;
   try {
-    shops = await Shop.find({ marketo: marketId });
+    totalItems = await Shop.countDocuments({});
+    totalShops = await Shop.countDocuments({
+      $and: [
+        {
+          $or: [
+            { name: { $regex: ifName, $options: "i" } },
+            { type: { $regex: ifName, $options: "i" } },
+            { description: { $regex: ifName, $options: "i" } },
+          ],
+        },
+        { marketo: marketId },
+      ],
+    });
+    shops = await Shop.find({
+      $and: [
+        {
+          $or: [
+            { name: { $regex: ifName, $options: "i" } },
+            { type: { $regex: ifName, $options: "i" } },
+            { description: { $regex: ifName, $options: "i" } },
+          ],
+        },
+        { marketo: marketId },
+      ],
+    })
+      .skip(offset)
+      .limit(limit);
   } catch (err) {
     const error = new HttpError("Fetching shops failed, please try again", 500);
     return next(error);
@@ -65,6 +96,10 @@ const getShopByMarketId = async (req, res, next) => {
     );
   }
   res.json({
+    totalPages: Math.ceil(totalShops / limit),
+    totalItems: totalItems,
+    limit: limit,
+    currentPageSize: shops.length,
     shops: shops.map((shop) => shop.toObject({ getters: true })),
   });
 };
@@ -138,7 +173,7 @@ const createShop = async (req, res, next) => {
   }
   console.log(createdShop);
   console.log(user);
-  console.log(market)
+  console.log(market);
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
@@ -256,15 +291,14 @@ const openShop = async (req, res, next) => {
   }
 
   try {
-    await checkRol(req.userData.userId,  shop.owner.toString());
+    await checkRol(req.userData.userId, shop.owner.toString());
   } catch (err) {
-    
     return next(err);
   }
 
   if (shop.active === true) {
     shop.active = false;
-  }  else {
+  } else {
     shop.active = true;
   }
 
@@ -277,7 +311,9 @@ const openShop = async (req, res, next) => {
     );
     return next(error);
   }
-  res.status(200).json({ message: "El estado de la tienda se ha actualizado." });
+  res
+    .status(200)
+    .json({ message: "El estado de la tienda se ha actualizado." });
 };
 
 exports.getShops = getShops;

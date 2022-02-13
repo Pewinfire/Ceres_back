@@ -10,7 +10,7 @@ router.get("/", shopControllers.getShops);
 
 router.get("/:shid", shopControllers.getShopById);
 
-router.get("/market/:mid", shopControllers.getShopByMarketId);
+router.get("/market/:mid/:page/:size/:nam", shopControllers.getShopByMarketId);
 
 router.get("/owner/:oid", shopControllers.getShopByOwnerId);
 
