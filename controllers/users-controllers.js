@@ -12,6 +12,7 @@ const mongoose = require("mongoose");
 const Product = require("../models/product");
 const checkRol = require("../util/checkRol");
 const user = require("../models/user");
+const getPagination = require("../util/pagination");
 
 //SIGN UP
 
@@ -287,21 +288,57 @@ const createRol = async (req, res, next) => {
 
 // PERMISOS EN DISEÑO/DESARROLLO
 const getUsers = async (req, res, next) => {
+  const { limit, offset } = getPagination(req.params.page, req.params.size);
+  const ifSort = req.params.sort !== "name" ? req.params.sort : "name";
+  const ifName = req.params.sch !== "user" ? req.params.sch : "";
+
   let users;
+  let totalItems;
+  let totalUsers;
   try {
-    users = await User.find({}, "-password -bill -shops").populate(
-      "rol",
-      "rol -_id id"
-    );
+    totalItems = await User.countDocuments({});
+    totalUsers = await User.countDocuments({
+      $or: [
+        { name: { $regex: ifName, $options: "i" } },
+        { lastname: { $regex: ifName, $options: "i" } },
+        { email: { $regex: ifName, $options: "i" } },
+        { dni: { $regex: ifName, $options: "i" } },
+        { phone: { $regex: ifName, $options: "i" } },
+        { address: { $regex: ifName, $options: "i" } },
+        /*  {
+          rol: { $regex: ifName, $options: "i" },
+        }, */
+      ],
+    });
+    users = await User.find(
+      {
+        $or: [
+          { name: { $regex: ifName, $options: "i" } },
+          { lastname: { $regex: ifName, $options: "i" } },
+          { email: { $regex: ifName, $options: "i" } },
+          { dni: { $regex: ifName, $options: "i" } },
+          { phone: { $regex: ifName, $options: "i" } },
+          { address: { $regex: ifName, $options: "i" } },
+          /*  {
+            rol: { $regex: ifName, $options: "i" },
+          }, */
+        ],
+      },
+      "-password"
+    )
+      .sort({ [ifSort]: req.params.dir })
+      .populate("rol", "rol rol")
+      .skip(offset)
+      .limit(limit);
   } catch (err) {
-    const error = new HttpError(
-      "Fetching users failed, please try again.",
-      500
-    );
+    const error = new HttpError(err, 500);
     return next(error);
   }
-
   res.json({
+    totalPages: Math.ceil(totalUsers / limit),
+    totalItems: totalItems,
+    limit: limit,
+    currentPageSize: users.length,
     users: users.map((user) => user.toObject({ getters: true })),
   });
 };
@@ -357,14 +394,15 @@ const getAuth = async (req, res, next) => {
 };
 
 const setSeller = async (req, res, next) => {
+  const userId = req.params.uid;
+  let user;
+  console.log(req.userData.userId);
   try {
     await checkRol(req.userData.userId, "1231231232");
   } catch (err) {
     const error = new HttpError("Unautorizhed", 401);
     return next(error);
   }
-  const { userId } = req.body;
-  let user;
   try {
     user = await User.findById(userId);
   } catch (err) {
@@ -681,10 +719,7 @@ const deleteCartItem = async (req, res, next) => {
   try {
     user = await User.findById(userId);
   } catch (err) {
-    const error = new HttpError(
-      err,
-      500
-    );
+    const error = new HttpError(err, 500);
     return next(error);
   }
 
@@ -704,7 +739,7 @@ const deleteCartItem = async (req, res, next) => {
     (obj) => obj.product.toString() !== productId
   );
 
-  console.log(user.cart.cartItem.product)
+  console.log(user.cart.cartItem.product);
   try {
     await user.save();
   } catch (err) {
