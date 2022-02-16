@@ -6,8 +6,9 @@ const mongoose = require("mongoose");
 async function checkRol(userDataId, userid) {
   let checkRol;
   let rol;
-  console.log(userid)
+ 
   try {
+    console.log("1")
     checkRol = await User.findById(userDataId);
     rol = await Rol.findById(checkRol.rol);
   } catch (err) {
@@ -20,7 +21,7 @@ async function checkRol(userDataId, userid) {
   }
   if (userid !== userDataId && rol.isAdmin === false) {
     // autorizacion  via token
-    console.log(userid, userDataId )
+    console.log("2" )
     const error = new HttpError("aqui", 401);
     return next(error);
   }

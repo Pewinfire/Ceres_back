@@ -4,7 +4,7 @@ const HttpError = require("../models/http-error");
 const Product = require("../models/product");
 const Category = require("../models/category");
 const Shop = require("../models/shop");
-const User = require("../models/user")
+const User = require("../models/user");
 const checkRol = require("../util/checkRol");
 const getPagination = require("../util/pagination");
 const mongoose = require("mongoose");
@@ -86,31 +86,42 @@ const getProductByShopId = async (req, res, next) => {
   try {
     totalItems = await Product.countDocuments({ shop: shopId });
     totalProducts = await Product.countDocuments({
-      $or: [
-        { name: { $regex: ifName, $options: "i" } },
-        { description: { $regex: ifName, $options: "i" } },
+      $and: [
         {
-          categories: {
-            $elemMatch: { name: { $regex: ifName, $options: "i" } },
-          },
+          $or: [
+            { name: { $regex: ifName, $options: "i" } },
+            { description: { $regex: ifName, $options: "i" } },
+            {
+              categories: {
+                $elemMatch: { name: { $regex: ifName, $options: "i" } },
+              },
+            },
+          ],
         },
+        { shop: shopId },
       ],
     });
+
     products = await Product.find({
-      $or: [
-        { name: { $regex: ifName, $options: "i" } },
-        { description: { $regex: ifName, $options: "i" } },
+      $and: [
         {
-          categories: {
-            $elemMatch: { name: { $regex: ifName, $options: "i" } },
-          },
+          $or: [
+            { name: { $regex: ifName, $options: "i" } },
+            { description: { $regex: ifName, $options: "i" } },
+            {
+              categories: {
+                $elemMatch: { name: { $regex: ifName, $options: "i" } },
+              },
+            },
+          ],
         },
+        { shop: shopId },
       ],
-    }).sort({[ifSort]: req.params.dir})
+    })
+      .sort({ [ifSort]: req.params.dir })
       .populate("categories", "name")
       .skip(offset)
       .limit(limit);
-      
   } catch (err) {
     const error = new HttpError(err, 500);
     return next(error);
@@ -291,14 +302,13 @@ const updateProductById = async (req, res, next) => {
 };
 
 const updateProductStats = async (req, res, next) => {
-
-  const {stats} = req.body;
+  const { stats } = req.body;
   const productId = req.params.pid;
 
   let shap;
   let user;
   try {
-    user = await User.findById(req.userData.userId)
+    user = await User.findById(req.userData.userId);
     shap = await Shop.findById(user.shop);
   } catch (err) {
     const error = new HttpError(
