@@ -396,7 +396,7 @@ const getAuth = async (req, res, next) => {
 const setSeller = async (req, res, next) => {
   const userId = req.params.uid;
   let user;
-  console.log(req.userData.userId);
+
   try {
     await checkRol(req.userData.userId, "1231231232");
   } catch (err) {

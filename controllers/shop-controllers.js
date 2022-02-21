@@ -127,13 +127,22 @@ const getShopByOwnerId = async (req, res, next) => {
 /////////////////////////////////////////Create//////////////////////////////
 
 const createShop = async (req, res, next) => {
+  // validaciones
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     next(new HttpError(" Invalid inputs passed, please check your data", 422));
   }
-
+  // comprobacion rol del user
+  try {
+    await checkRol(req.userData.userId, "1231231232");
+  } catch (err) {
+    const error = new HttpError("Unautorizhed", 401);
+    return next(error);
+  }
+  // destructuring parametros payload 
   const { name, type, description, location, owner, marketo } = req.body;
 
+  // nuevo objeto SHOP, creado a partir de los modelos mongoose
   const createdShop = new Shop({
     name,
     type,
@@ -147,16 +156,18 @@ const createShop = async (req, res, next) => {
     reviews: [],
   });
 
+  // se busca el usuario (propietario) y el objeto (mercado) segun las ids proporcionadas (relaciones, referencias)
   let user;
   let market;
   try {
     user = await User.findById(owner);
     market = await Market.findById(marketo);
   } catch (err) {
+// si ocurre algun error durante la busqueda
     const error = new HttpError("Creating shop failed, try again", 500);
     return next(error);
   }
-
+// si no encuentra usuario con ese id
   if (!user) {
     const error = new HttpError(
       " Could not find user or market for provided id",
@@ -164,6 +175,7 @@ const createShop = async (req, res, next) => {
     );
     return next(error);
   }
+  // si no encuentra mercado con ese id
   if (!market) {
     const error = new HttpError(
       " Could not find user or market for provided id",
@@ -171,9 +183,8 @@ const createShop = async (req, res, next) => {
     );
     return next(error);
   }
-  console.log(createdShop);
-  console.log(user);
-  console.log(market);
+// transaccion,  guarda la nueva tienda , busca al usuario y en su field tienda introduce el nuevo objeto, busca el mercado 
+//y en su field (array) de tiendas pushea la nueva tienda , "commit" la sesion
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
@@ -184,11 +195,12 @@ const createShop = async (req, res, next) => {
     await market.save({ session: sess });
     await sess.commitTransaction();
   } catch (err) {
+    // si ocurre algun error en la sesion
     const error = new HttpError(err, 500);
     return next(error);
   }
-
-  res.status(201).json({ shop: createdShop.toObject({ getters: true }) }); //exito en sv
+  // en caso de exito devuelve la tienda
+  res.status(201).json({ shop: createdShop.toObject({ getters: true }) }); 
 };
 
 const updateShopById = async (req, res, next) => {
