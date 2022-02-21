@@ -2,6 +2,7 @@ const { validationResult } = require("express-validator");
 const HttpError = require("../models/http-error");
 const Category = require("../models/category");
 const Product = require("../models/product");
+const checkRol = require("../util/checkRol");
 const mongoose = require("mongoose");
 
 const getCategories = async (req, res, next) => {
@@ -102,12 +103,6 @@ const updateCategoryById = async (req, res, next) => {
     return next(error);
   }
 
-  /*   if (category.creator.toString() !== req.userData.userId) {
-    // autorizacion  via token
-    const error = new HttpError("You are not allowed to edit the post", 401);
-    return next(error);
-  } */
-
   category.name = name;
 
   try {
@@ -125,33 +120,33 @@ const updateCategoryById = async (req, res, next) => {
 
 const deleteCategoryById = async (req, res, next) => {
   const categoryId = req.params.cid;
-
+  // comprueba si el usuario que envia la req es admin
+  try {
+    await checkRol(req.userData.userId, "1231231232");
+  } catch (err) {
+    const error = new HttpError("Unautorizhed", 401);
+    return next(error);
+  }
+  // busca la categoria segun el id que se le ha pasado por url
   let category;
   try {
     category = await Category.findById(categoryId);
   } catch (err) {
+  //error en la busqueda
     const error = new HttpError(
       "Something went wrong, could not delete category.",
       500
     );
     return next(error);
   }
-
+// no se encuentra categoria
   if (!category) {
     const error = new HttpError("Could not find a product for this id", 404); // check si existe el id
     return next(error);
   }
-
-  /*   if (product.creator.id !== req.userData.userId) {
-    // autorizacion  via token
-    const error = new HttpError("You are not allowed to delete the post", 401);
-    return next(error);
-  } 
-
-  const imagePath = product.image;
-*/
-
   let product;
+  // abre sesion, coge el array de productos de esa categoria y busca en la coleccion (tabla) de productos todos
+  //aquellos con esa categoria (otro array), pullea la categoria y guarda el producto. Commitea la sesion
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();

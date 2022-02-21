@@ -220,17 +220,40 @@ const createProduct = async (req, res, next) => {
 };
 
 const updateProductById = async (req, res, next) => {
+  // validacion
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return next(
       new HttpError(" Invalid inputs passed, please check your data", 422)
     );
   }
-
-  const { name, categories } = req.body;
+  // destructuring del payload
+  const { name, categories, shop } = req.body;
   const productId = req.params.pid;
-
+  //busqueda de la tienda que tiene el producto
+  let shap;
+  try {
+    shap = await Shop.findById(shop);
+  } catch (err) {
+    const error = new HttpError(
+      "Ha ocurrido un error al intentar identificar su tienda",
+      500
+    );
+    return next(error);
+  }
+  if (!shap) {
+    const error = new HttpError("Could not find a shop for this id", 404); // check si existe el id
+    return next(error);
+  }
+  // comprueba que el usuario es administrador o propietario de esa tienda
+  try {
+    await checkRol(req.userData.userId, shap.owner.toString());
+  } catch (err) {
+    const error = new HttpError("Unauthorized", 404);
+    return next(err);
+  }
   let product;
+  // busqueda del producto 
   try {
     product = await Product.findById(productId);
   } catch (err) {
@@ -241,12 +264,8 @@ const updateProductById = async (req, res, next) => {
     return next(error);
   }
 
-  /*   if (product.creator.toString() !== req.userData.userId) {
-    // autorizacion  via token
-    const error = new HttpError("You are not allowed to edit the post", 401);
-    return next(error);
-  } */
   product.name = name;
+// busqueda de las categorias segun las categorias que tenga el producto
   try {
     cats = await Category.find({ _id: { $in: categories } });
   } catch (err) {
@@ -260,10 +279,12 @@ const updateProductById = async (req, res, next) => {
     );
     return next(error);
   }
+
+  // serie de comparaciones de varios arrays de categorias para obtener que categoria desaparecen y cuales aparecen
+
   let catAd;
   let catAdd;
   let catRemove;
-
   try {
     catRemove = await product.categories.filter(
       (cat) => !categories.includes(cat.toString())
@@ -278,6 +299,14 @@ const updateProductById = async (req, res, next) => {
   }
 
   product.categories = cats;
+  
+  let category;
+
+  // se abre sesion, se recorre el array de categorias a eliminar,
+  // y por cada una se busca en la coleccion categorias las que tengan el producto en su array de productos. Se pullean
+  // se recorre el array de categorias a añadir
+  // y por cada match en la coleccion categorias se pushea el producto dentro del campo
+  // se commitea la sesion
 
   try {
     const sess = await mongoose.startSession();
@@ -298,6 +327,7 @@ const updateProductById = async (req, res, next) => {
     const error = new HttpError(err, 500);
     return next(error);
   }
+  // respuesta del producto updateado
   res.status(200).json({ product: product.toObject({ getters: true }) });
 };
 

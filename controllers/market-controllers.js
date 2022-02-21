@@ -6,11 +6,13 @@ const Market = require("../models/market");
 const getPagination = require("../util/pagination");
 
 const getMarkets = async (req, res, next) => {
+  // parametros page, size, calcula paginacion /filter de la url, pequeña condicion para filtro vacio
   const { limit, offset } = getPagination(req.params.page, req.params.size);
   const ifName = req.params.nam !== "merca" ? req.params.nam : " ";
   let markets;
   let totalItems;
   let totalMarkets;
+  // cuenta mercados , cuenta mercados aplicando filtro (para paginacion), busqueda de mercados aplicando filtro y paginacion
   try {
     totalItems = await Market.countDocuments({});
     totalMarkets = await Market.countDocuments({
@@ -26,17 +28,28 @@ const getMarkets = async (req, res, next) => {
           { address: { $regex: ifName, $options: "i" } },
         ],
       },
+      // no devuelve el campo array de tiendas ( podemos elegir que campos devuelve)
       "-shops"
     )
       .skip(offset)
       .limit(limit);
   } catch (err) {
     const error = new HttpError(
+      // errror en la busqueda
       "No se han introducido caracteres válidos",
       500
     );
     return next(error);
   }
+  //si resultado vacio
+  if (!markets) {
+    const error = new HttpError(
+      " No se han encontrado resultados para su busqueda",
+      404
+    );
+    return next(error);
+  }
+  // respuesta 
   res.json({
     totalPages: Math.ceil(totalMarkets / limit),
     totalItems: totalItems,
