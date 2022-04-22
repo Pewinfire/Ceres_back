@@ -8,11 +8,11 @@ async function checkRol(userDataId, userid) {
   let rol;
  
   try {
-    console.log("1")
+  
     checkRol = await User.findById(userDataId);
     rol = await Rol.findById(checkRol.rol);
   } catch (err) {
-    console.log(err)
+   
     const error = new HttpError(
       err,
       401
@@ -21,7 +21,7 @@ async function checkRol(userDataId, userid) {
   }
   if (userid !== userDataId && rol.isAdmin === false) {
     // autorizacion  via token
-    console.log("2" )
+
     const error = new HttpError("aqui", 401);
     return next(error);
   }

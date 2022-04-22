@@ -557,17 +557,30 @@ const addToUserCart = async (req, res, next) => {
     product = await Product.findById(productId);
   } catch (err) {
     const error = new HttpError(
-      "Algo ha ido mal, no se ha podido encontrar el producto, pruee de nuevo",
+      "Algo ha ido mal, no se ha podido encontrar el producto, pruebe de nuevo",
       500
     );
     return next(error);
   }
   let quantity = productSize;
+  let cart = user.cart.cartItem;
+  let productIndex = user.cart.cartItem.findIndex((cp) => {
+    return cp.product.toString() === product._id.toString();
+  });
   if (product.stats.stock > quantity) {
-    user.cart.cartItem.push({
-      product: product,
-      quantity,
-    });
+    if (productIndex >= 0) {
+      cart[productIndex].quantity =
+        user.cart.cartItem[productIndex].quantity + quantity;
+    } else {
+      cart.push({
+        product: product,
+        quantity,
+      });
+    }
+    console.log(user.cart.cartItem);
+    console.log(cart);
+    user.cart.cartItem = cart;
+    console.log(user.cart.cartItem);
   } else {
     const error = new HttpError("Este producto se encuentra sin stock", 428);
     return next(error);
@@ -576,10 +589,7 @@ const addToUserCart = async (req, res, next) => {
   try {
     await user.save();
   } catch (err) {
-    const error = new HttpError(
-      "No se ha podido añadir el producto al carro, intentelo de nuevo",
-      500
-    );
+    const error = new HttpError(err, 500);
     return next(error);
   }
 
