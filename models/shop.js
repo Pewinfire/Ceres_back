@@ -10,6 +10,7 @@ const shopSchema = new Schema({
   image: { type: String, required: true},
   active: { type: Boolean },
   owner: { type: mongoose.Types.ObjectId, required: true, ref: "User" },
+  orders: [{ type: mongoose.Types.ObjectId, ref: "Order" }],
   marketo: { type: mongoose.Types.ObjectId, required: true, ref: "Market" },
   products: [{ type: mongoose.Types.ObjectId, ref: "Product" }],
   reviews: [{ type: mongoose.Types.ObjectId, ref: "Reviews" }],

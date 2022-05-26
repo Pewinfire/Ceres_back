@@ -13,6 +13,8 @@ const Product = require("../models/product");
 const checkRol = require("../util/checkRol");
 const user = require("../models/user");
 const getPagination = require("../util/pagination");
+const order = require("../models/order");
+const shop = require("../models/shop");
 
 //SIGN UP
 
@@ -23,7 +25,18 @@ const signup = async (req, res, next) => {
       new HttpError(" Invalid inputs passed, please check your data", 422)
     );
   }
-  const { name, lastname, email, password, phone, dni, address } = req.body;
+  const {
+    name,
+    lastname,
+    email,
+    password,
+    phone,
+    dni,
+    address,
+    province,
+    locality,
+    postalCode,
+  } = req.body;
 
   let existingUser;
   let UserRol = await Rol.findById("61f139ed9f9766acbd29b445");
@@ -63,7 +76,12 @@ const signup = async (req, res, next) => {
     phone,
     dni,
     image: req.file.path,
-    address,
+    address: {
+      address,
+      province,
+      locality,
+      postalCode,
+    },
     rol: UserRol,
   });
   try {
@@ -141,29 +159,29 @@ const login = async (req, res, next) => {
     return next(error);
   }
 
-  let token;
-  try {
-    token = jwt.sign(
-      {
+      let token;
+      try {
+        token = jwt.sign(
+          {
+            userId: existingUser.id,
+            email: existingUser.email,
+          },
+          process.env.JWT_KEY,
+          {
+            expiresIn: "2h",
+          }
+        );
+      } catch (err) {
+        const error = new HttpError("Loggin failed, please try again later.", 500);
+        return next(error);
+      }
+
+      res.json({
         userId: existingUser.id,
         email: existingUser.email,
-      },
-      process.env.JWT_KEY,
-      {
-        expiresIn: "2h",
-      }
-    );
-  } catch (err) {
-    const error = new HttpError("Loggin failed, please try again later.", 500);
-    return next(error);
-  }
-
-  res.json({
-    userId: existingUser.id,
-    email: existingUser.email,
-    token: token,
-  });
-};
+        token: token,
+      });
+    };
 
 //UPDATE CONTROL USER(mismo) , ADMIN
 
@@ -209,7 +227,17 @@ const updateUser = async (req, res, next) => {
       new HttpError(" Invalid inputs passed, please check your data", 422)
     );
   }
-  const { name, lastname, phone, dni, address, imageup } = req.body;
+  const {
+    name,
+    lastname,
+    phone,
+    dni,
+    imageup,
+    address,
+    province,
+    locality,
+    postalCode,
+  } = req.body;
 
   const userId = req.params.uid;
 
@@ -236,7 +264,12 @@ const updateUser = async (req, res, next) => {
   user.lastname = lastname;
   user.phone = phone;
   user.dni = dni;
-  user.address = address;
+  user.address = {
+    address,
+    province,
+    locality,
+    postalCode,
+  };
 
   const imagePath = user.image;
   if (imageup === "true") {
@@ -248,6 +281,54 @@ const updateUser = async (req, res, next) => {
     if (imageup === "true") {
       fs.unlink(imagePath, (err) => {});
     }
+  } catch (err) {
+    const error = new HttpError(
+      "No se ha podido actualizar el Usuario, intentelo de nuevo",
+      500
+    );
+    return next(error);
+  }
+
+  res.status(200).json({ user: user.toObject({ getters: true }) });
+};
+
+const updateAddress = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(
+      new HttpError(" Invalid inputs passed, please check your data", 422)
+    );
+  }
+  const { address, province, locality, postalCode } = req.body;
+
+  const userId = req.userData.userId;
+
+  let user;
+
+  try {
+    user = await User.findById(userId);
+  } catch (err) {
+    const error = new HttpError(
+      "Algo ha ido mal, no se ha podido actualizar la dirección del usuario, intentelo de nuevo",
+      500
+    );
+    return next(error);
+  }
+
+  try {
+    await checkRol(req.userData.userId, user.id);
+  } catch (err) {
+    const error = new HttpError("Unautorizhed", 401);
+    return next(error);
+  }
+
+  user.address.address = address;
+  user.address.province = province;
+  user.address.locality = locality;
+  user.address.postalCode = postalCode;
+
+  try {
+    await user.save();
   } catch (err) {
     const error = new HttpError(
       "No se ha podido actualizar el Usuario, intentelo de nuevo",
@@ -528,7 +609,7 @@ const addToUserCart = async (req, res, next) => {
       new HttpError(" Invalid inputs passed, please check your data", 422)
     );
   }
-  const { productId, productSize } = req.body;
+  const { productId, shopId, productSize } = req.body;
 
   const userId = req.userData.userId;
 
@@ -562,6 +643,19 @@ const addToUserCart = async (req, res, next) => {
     );
     return next(error);
   }
+
+  let shop;
+
+  try {
+    shop = await Shop.findById(shopId);
+  } catch (err) {
+    const error = new HttpError(
+      "Algo ha ido mal, no se ha podido encontrar el producto, pruebe de nuevo",
+      500
+    );
+    return next(error);
+  }
+
   let quantity = productSize;
   let cart = user.cart.cartItem;
   let productIndex = user.cart.cartItem.findIndex((cp) => {
@@ -574,13 +668,12 @@ const addToUserCart = async (req, res, next) => {
     } else {
       cart.push({
         product: product,
+        shop: shop,
         quantity,
       });
     }
-    console.log(user.cart.cartItem);
-    console.log(cart);
+
     user.cart.cartItem = cart;
-    console.log(user.cart.cartItem);
   } else {
     const error = new HttpError("Este producto se encuentra sin stock", 428);
     return next(error);
@@ -594,6 +687,75 @@ const addToUserCart = async (req, res, next) => {
   }
 
   res.status(200).json({ user: user.toObject({ getters: true }) });
+};
+
+const makeOrder = async (req, res, next) => {
+  const { billingAdd } = req.body;
+  const userId = req.userData.userId;
+
+  let user;
+  try {
+    user = await User.findById(req.userData.userId);
+  } catch (err) {
+    const error = new HttpError(
+      "No se han podido obtener los datos del usuario",
+      500
+    );
+    return next(error);
+  }
+  if (!user) {
+    const error = new HttpError(
+      "No se ha encontrado un usuario para el id proporcionado.",
+      404
+    );
+    return next(error);
+  }
+
+  try {
+    await checkRol(req.userData.userId, user.id);
+  } catch (err) {
+    const error = new HttpError("Unautorizhed", 401);
+    return next(error);
+  }
+
+  let vendors = new Set();
+  user.cart.cartItem.forEach((i) => vendors.add(i.shop));
+  let vendorsList = Array.from(vendors);
+
+  try {
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    for (const vendor of vendorsList) {
+      let items = user.cart.cartItem.filter((item) => item.shop == vendor);
+      for (const item of items) {
+        let product = await Product.findById(item.product);
+        console.log(product.stats.stock);
+        if (product.stats.stock - item.quantity >= 0) {
+          product.stats.stock = product.stats.stock - item.quantity;
+        } else {
+          const err = new HttpError(`Se han acabado las existencias de ${product.name}, modifique su carro por favor.` , 400);
+          return next(err);
+        }
+        console.log(product.stats.stock);
+        await product.save({ session: sess });
+      }
+      let shop = await Shop.findById(vendor);
+      let makeOrder = new order({
+        client: user,
+        vendor: shop,
+        billingAddress: billingAdd ? billingAdd : user.address,
+        soldProducts: items,
+      });
+      await makeOrder.save({ session: sess });
+      shop.orders.push(makeOrder);
+      await shop.save({ session: sess });
+      user.orders.push(makeOrder);
+      await user.save({ session: sess });
+    }
+    await sess.commitTransaction();
+  } catch (err) {
+    console.log(err);
+  }
 };
 
 const contactForm = async (req, res, next) => {
@@ -693,7 +855,7 @@ const getUserCart = async (req, res, next) => {
   let user;
   try {
     user = await User.findById({ _id: userId }, "cart").populate(
-      "cart.cartItem.product",
+      "cart.cartItem.product cart.cartItem.shop",
       "stats.price stats.format name image"
     );
   } catch (err) {
@@ -760,6 +922,7 @@ const deleteCartItem = async (req, res, next) => {
   res.status(200).json({ message: "Deleted product." });
 };
 
+exports.updateAddress = updateAddress;
 exports.deleteCartItem = deleteCartItem;
 exports.getUserCart = getUserCart;
 exports.createRol = createRol;
@@ -773,3 +936,4 @@ exports.login = login;
 exports.getAuth = getAuth;
 exports.setSeller = setSeller;
 exports.addaddToUserCart = addToUserCart;
+exports.makeOrder = makeOrder;

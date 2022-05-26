@@ -6,8 +6,6 @@ const usersControllers = require("../controllers/users-controllers");
 const fileUpload = require("../middleware/file-upload");
 const router = express.Router();
 
-
-
 //users
 
 router.post(
@@ -21,19 +19,20 @@ router.post(
     check("dni").not().isEmpty(),
     check("phone").isNumeric(),
     check("address").not().isEmpty(),
+    check("province").not().isEmpty(),
+    check("locality").not().isEmpty(),
+    check("postalCode").not().isEmpty(),
   ],
   usersControllers.signup
 );
 
 router.post("/login", usersControllers.login);
 
-
-
-router.use(checkAuth);
-router.get("/getall/:page/:size/:sch/:sort/:dir", usersControllers.getUsers);
-router.get("/vendors/", usersControllers.getVendors);
-router.get("/:uid", usersControllers.getUserById);
-router.get("/auth/checkrol", usersControllers.getAuth);
+      router.use(checkAuth);
+      router.get("/getall/:page/:size/:sch/:sort/:dir", usersControllers.getUsers);
+      router.get("/vendors/", usersControllers.getVendors);
+      router.get("/:uid", usersControllers.getUserById);
+      router.get("/auth/checkrol", usersControllers.getAuth);
 router.patch(
   "/:uid",
   fileUpload.single("image"),
@@ -43,24 +42,43 @@ router.patch(
     check("dni").not().isEmpty(),
     check("phone").isNumeric(),
     check("address").not().isEmpty(),
+    check("province").not().isEmpty(),
+    check("locality").not().isEmpty(),
+    check("postalCode").not().isEmpty(),
   ],
   usersControllers.updateUser
 );
+
+router.post("/makeOrder", usersControllers.makeOrder);
+
+router.patch(
+  "/address/:uid",
+  [
+    check("address").not().isEmpty(),
+    check("locality").not().isEmpty(),
+    check("postalCode").not().isEmpty(),
+    check("province").not().isEmpty(),
+  ],
+  usersControllers.updateAddress
+);
+
 router.patch(
   "/pass/:uid",
   [check("password").not().isEmpty(), check("oldPassword").not().isEmpty()],
   usersControllers.updatePass
 );
+
 router.patch(
   "/cart/addto",
-  [check("productId").not().isEmpty(), check("productSize").not().isEmpty()],
+  [
+    check("productId").not().isEmpty(),
+    check("shopId").not().isEmpty(),
+    check("productSize").not().isEmpty(),
+  ],
   usersControllers.addaddToUserCart
 );
 
-router.patch(
-  "/setrol/setseller/:uid",
-  usersControllers.setSeller
-);
+router.patch("/setrol/setseller/:uid", usersControllers.setSeller);
 
 router.patch("/cart/deleteItem/:pid", usersControllers.deleteCartItem);
 

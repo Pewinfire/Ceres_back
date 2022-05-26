@@ -37,11 +37,11 @@ router.patch(
 ); // validacion
 
 
-router.use(checkAuth);
-router.patch(
-  "/status/:shid",
-  shopControllers.openShop
-);
+        router.use(checkAuth);
+        router.patch(
+          "/status/:shid",
+          shopControllers.openShop
+        );
 
 router.delete("/:shid", shopControllers.deleteShopById);
 

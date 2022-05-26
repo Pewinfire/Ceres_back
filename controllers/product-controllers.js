@@ -253,7 +253,7 @@ const updateProductById = async (req, res, next) => {
     return next(err);
   }
   let product;
-  // busqueda del producto 
+  // busqueda del producto
   try {
     product = await Product.findById(productId);
   } catch (err) {
@@ -265,7 +265,7 @@ const updateProductById = async (req, res, next) => {
   }
 
   product.name = name;
-// busqueda de las categorias segun las categorias que tenga el producto
+  // busqueda de las categorias segun las categorias que tenga el producto
   try {
     cats = await Category.find({ _id: { $in: categories } });
   } catch (err) {
@@ -282,24 +282,24 @@ const updateProductById = async (req, res, next) => {
 
   // serie de comparaciones de varios arrays de categorias para obtener que categoria desaparecen y cuales aparecen
 
-  let catAd;
+  let categoriesFromClient;
   let catAdd;
   let catRemove;
   try {
+    categoriesFromClient = categories.map((c) => mongoose.Types.ObjectId(c));
     catRemove = await product.categories.filter(
-      (cat) => !categories.includes(cat.toString())
+      (cat) => !categoriesFromClient.includes(cat)
     );
-    catAd = await categories.filter(
-      (cat) => !product.categories.toString().includes(cat)
+    catAdd = await categoriesFromClient.filter(
+      (cat) => !product.categories.includes(cat)
     );
-    catAdd = catAd.map((s) => mongoose.Types.ObjectId(s));
   } catch (err) {
     const error = new HttpError(err, 500);
     return next(error);
   }
 
   product.categories = cats;
-  
+
   let category;
 
   // se abre sesion, se recorre el array de categorias a eliminar,

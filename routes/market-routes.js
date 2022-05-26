@@ -30,15 +30,15 @@ router.patch(
   marketControllers.updateMarketById
 );
 
-router.post(
-  "/",
-  fileUpload.single("image"),
-  [
-    check("name").not().isEmpty(),
-    check("postalCode").isLength(5),
-    check("address").not().isEmpty(),
-  ],
-  marketControllers.createMarket
-);
+      router.post(
+        "/",
+        fileUpload.single("image"),
+        [
+          check("name").not().isEmpty(),
+          check("postalCode").isLength(5),
+          check("address").not().isEmpty(),
+        ],
+        marketControllers.createMarket
+      );
 
 module.exports = router;

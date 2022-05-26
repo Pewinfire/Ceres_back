@@ -187,15 +187,15 @@ const createMarket = async (req, res, next) => {
   } catch (error) {
     return next(error);
   }
-  const createdMarket = new Market({
-    name,
-    postalCode,
-    image: req.file.path,
-    address,
-    location: coordinates,
-    geoSon,
-    shop: [],
-  });
+        const createdMarket = new Market({
+          name,
+          postalCode,
+          image: req.file.path,
+          address,
+          location: coordinates,
+          geoSon,
+          shop: [],
+        });
 
   try {
     await createdMarket.save();

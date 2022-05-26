@@ -10,7 +10,12 @@ const userSchema = new Schema({
   dni: { type: String, required: true },
   phone: { type: String, required: true, maxlength: 9 },
   image: { type: String, required: true },
-  address: { type: String, required: true },
+  address: {
+    address: { type: String, required: true },
+    province: { type: String, required: true },
+    locality: { type: String, required: true },
+    postalCode: { type: String, required: true },
+  }, 
   cart: {
     cartItem: [
       {
@@ -19,7 +24,13 @@ const userSchema = new Schema({
           required: true,
           ref: "Product",
         },
+        shop:{
+          type: mongoose.Types.ObjectId,
+          required: true,
+          ref: "Shop",
+        },
         quantity: { type: Number, required: true },
+       
       },
     ],
   },
