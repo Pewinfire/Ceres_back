@@ -13,8 +13,9 @@ const Product = require("../models/product");
 const checkRol = require("../util/checkRol");
 const user = require("../models/user");
 const getPagination = require("../util/pagination");
-const order = require("../models/order");
-const shop = require("../models/shop");
+const Order = require("../models/order");
+const Pedido = require("../models/pedidos.js");
+const pedidos = require("../models/pedidos.js");
 
 //SIGN UP
 
@@ -159,29 +160,29 @@ const login = async (req, res, next) => {
     return next(error);
   }
 
-      let token;
-      try {
-        token = jwt.sign(
-          {
-            userId: existingUser.id,
-            email: existingUser.email,
-          },
-          process.env.JWT_KEY,
-          {
-            expiresIn: "2h",
-          }
-        );
-      } catch (err) {
-        const error = new HttpError("Loggin failed, please try again later.", 500);
-        return next(error);
-      }
-
-      res.json({
+  let token;
+  try {
+    token = jwt.sign(
+      {
         userId: existingUser.id,
         email: existingUser.email,
-        token: token,
-      });
-    };
+      },
+      process.env.JWT_KEY,
+      {
+        expiresIn: "2h",
+      }
+    );
+  } catch (err) {
+    const error = new HttpError("Loggin failed, please try again later.", 500);
+    return next(error);
+  }
+
+  res.json({
+    userId: existingUser.id,
+    email: existingUser.email,
+    token: token,
+  });
+};
 
 //UPDATE CONTROL USER(mismo) , ADMIN
 
@@ -719,43 +720,60 @@ const makeOrder = async (req, res, next) => {
   }
 
   let vendors = new Set();
-  user.cart.cartItem.forEach((i) => vendors.add(i.shop));
-  let vendorsList = Array.from(vendors);
+  user.cart.cartItem.forEach((i) => vendors.add(i.shop.toString()));
+  let vendorsList = [...vendors];
 
+  let pedido = new Pedido({
+    facturas: [],
+    user: "",
+  });
   try {
     const sess = await mongoose.startSession();
     sess.startTransaction();
     for (const vendor of vendorsList) {
-      let items = user.cart.cartItem.filter((item) => item.shop == vendor);
+      let makeOrder = new Order({
+        client: user,
+        billingAddress: billingAdd ? billingAdd : user.address,
+      });
+      let items = user.cart.cartItem.filter((item) => {
+        return item.shop.toString() == vendor;
+      });
+      console.log(vendorsList);
+      console.log(items);
       for (const item of items) {
         let product = await Product.findById(item.product);
-        console.log(product.stats.stock);
         if (product.stats.stock - item.quantity >= 0) {
           product.stats.stock = product.stats.stock - item.quantity;
         } else {
-          const err = new HttpError(`Se han acabado las existencias de ${product.name}, modifique su carro por favor.` , 400);
+          const err = new HttpError(
+            `Se han acabado las existencias de ${product.name}, modifique su carro por favor.`,
+            400
+          );
           return next(err);
         }
-        console.log(product.stats.stock);
+
         await product.save({ session: sess });
       }
+
       let shop = await Shop.findById(vendor);
-      let makeOrder = new order({
-        client: user,
-        vendor: shop,
-        billingAddress: billingAdd ? billingAdd : user.address,
-        soldProducts: items,
-      });
-      await makeOrder.save({ session: sess });
-      shop.orders.push(makeOrder);
+      makeOrder.vendor = await shop;
+      makeOrder.soldProducts = await items;
+      makeOrder.pedido = await pedido;
+      await shop.orders.push(makeOrder);
       await shop.save({ session: sess });
-      user.orders.push(makeOrder);
+      await user.orders.push(makeOrder);
       await user.save({ session: sess });
+      pedido.facturas.push(makeOrder);
+      pedido.user = await makeOrder.client;
+      await makeOrder.save({ session: sess });
     }
+    await pedido.save({ session: sess });
+
     await sess.commitTransaction();
   } catch (err) {
     console.log(err);
   }
+  res.status(200).json({ pedido: pedido.id });
 };
 
 const contactForm = async (req, res, next) => {
@@ -805,6 +823,77 @@ const contactForm = async (req, res, next) => {
   res.status(201).json({ form: createdForm.toObject({ getters: true }) });
 };
 
+const getOrdersByVendor = async (req, res, next) => {
+  const shopId = req.params.sid;
+  const { limit, offset } = getPagination(req.params.page, req.params.size);
+  const ifName = req.params.nam !== "order" ? req.params.nam : " ";
+  let totalItems;
+  let totalOrders;
+
+  let orders;
+  try {
+    totalItems = await Order.countDocuments({ vendor: shopId });
+    totalOrders = await Order.countDocuments({ vendor: shopId })
+      .skip(offset)
+      .limit(limit);
+    orders = await Order.find({ vendor: shopId })
+      .sort("-dateOrder")
+      .populate("client", "name lastname")
+      .skip(offset)
+      .limit(limit);
+  } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+  if (!orders || orders.length === 0) {
+    return next(
+      new HttpError("Could not find a orders for the provided vendor id.", 404)
+    );
+  }
+  res.json({
+    totalPages: Math.ceil(totalItems / limit),
+    totalItems: totalItems,
+    limit: limit,
+    currentPageSize: orders.length,
+    orders: orders.map((order) => order.toObject({ getters: true })),
+  });
+};
+
+const getOrdersByClient = async (req, res, next) => {
+  const userId = req.params.uid;
+  const { limit, offset } = getPagination(req.params.page, req.params.size);
+  const ifName = req.params.nam !== "order" ? req.params.nam : " ";
+  let totalItems;
+  let totalOrders;
+
+  let orders;
+  try {
+    totalItems = await Order.countDocuments({ vendor: userId });
+    totalOrders = await Order.countDocuments({ vendor: userId })
+      .skip(offset)
+      .limit(limit);
+    orders = await Order.find({ client: userId })
+      .sort("-dateOrder")
+      .populate("vendor", "name")
+      .skip(offset)
+      .limit(limit);
+  } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+  if (!orders || orders.length === 0) {
+    return next(
+      new HttpError("Could not find a orders for the provided client id.", 404)
+    );
+  }
+  res.json({
+    totalPages: Math.ceil(totalItems / limit),
+    totalItems: totalItems,
+    limit: limit,
+    currentPageSize: orders.length,
+    orders: orders.map((order) => order.toObject({ getters: true })),
+  });
+};
 const getHelpFormsByUserId = async (req, res, next) => {
   const userId = req.params.uid;
   let forms;
@@ -921,7 +1010,238 @@ const deleteCartItem = async (req, res, next) => {
 
   res.status(200).json({ message: "Deleted product." });
 };
+const acceptOrder = async (req, res, next) => {
+  const orderId = req.params.oid;
+  let order;
+  try {
+    order = await Order.findById({ _id: orderId });
+  } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+  if (!order) {
+    const error = new HttpError(
+      "No se ha encontrado un usuario para el id proporcionado.",
+      404
+    );
+    return next(error);
+  }
+  order.aceptado = true;
+  await order.save();
+  res.json({ order: order.toObject({ getters: true }) });
+};
 
+const cancelOrder = async (req, res, next) => {
+  const orderId = req.params.oid;
+  let order;
+  try {
+    order = await Order.findById({ _id: orderId });
+  } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+  if (!order) {
+    const error = new HttpError(
+      "No se ha encontrado un pedido para el id proporcionado.",
+      404
+    );
+    return next(error);
+  }
+  order.cancelado = true;
+  await order.save();
+  res.json({ order: order.toObject({ getters: true }) });
+};
+
+const getOrder = async (req, res, next) => {
+  const orderId = req.params.oid;
+  console.log(orderId);
+  let order;
+  try {
+    order = await Order.findById({ _id: req.params.oid }).populate([
+      {
+        path: "client",
+        select: "name lastname dni address",
+      },
+      {
+        path: "vendor",
+        model: Shop,
+        select: "name nif location ",
+        populate: [
+          {
+            path: "owner",
+            select: "name lastname",
+          },
+          {
+            path: "marketo",
+            select: "name",
+          },
+        ],
+      },
+      {
+        path: "soldProducts",
+        select: "quantity ",
+        populate: [
+          {
+            path: "product",
+            model: Product,
+            select: "name stats.price stats.format stats.discount",
+          },
+        ],
+      },
+    ]);
+  } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+  if (!order) {
+    const error = new HttpError(
+      "No se ha encontrado un pedido para el id proporcionado.",
+      404
+    );
+    return next(error);
+  }
+
+  res.json({ order: order.toObject({ getters: true }) });
+};
+
+const getPedido = async (req, res, next) => {
+  const pedidoId = req.params.pid;
+  let pedido;
+  try {
+    pedido = await pedidos.findById({ _id: pedidoId }).populate({
+      path: "facturas",
+      populate: [
+        { path: "client", select: "name lastname dni address" },
+        {
+          path: "vendor",
+          model: Shop,
+          select: "name nif location ",
+          populate: [
+            {
+              path: "owner",
+              select: "name lastname",
+            },
+            {
+              path: "marketo",
+              select: "name",
+            },
+          ],
+        },
+        {
+          path: "soldProducts",
+          select: "quantity ",
+          populate: [
+            {
+              path: "product",
+              model: Product,
+              select: "name stats.price stats.format stats.discount",
+            },
+          ],
+        },
+      ],
+    });
+  } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+  if (!pedido) {
+    const error = new HttpError(
+      "No se ha encontrado un usuario para el id proporcionado.",
+      404
+    );
+    return next(error);
+  }
+
+  res.json({ pedido: pedido.facturas.toObject({ getters: true }) });
+};
+const getOrders = async (req, res, next) => {
+  const orderId = req.params.oid;
+
+  // try {
+  //   await checkRol(req.userData.userId, user.id);
+  // } catch (err) {
+  //   const error = new HttpError("Unautorizhed", 401);
+  //   return next(error);
+  // }
+  let order;
+  try {
+    order = await Order.findById({ _id: orderId })
+      .populate("client", "name lastname dni")
+      .populate({
+        path: "vendor",
+        model: Shop,
+        select: "name nif location ",
+        populate: [
+          {
+            path: "owner",
+            select: "name lastname",
+          },
+          {
+            path: "marketo",
+            select: "name",
+          },
+        ],
+      })
+      .populate({
+        path: "soldProducts",
+
+        select: "quantity ",
+        populate: [
+          {
+            path: "product",
+            model: Product,
+            select: "name stats.price stats.format stats.discount",
+          },
+        ],
+      });
+    // user = await User.findById({ _id: userId }, "cart").populate(
+    //   "cart.cartItem.product cart.cartItem.shop",
+    //   "stats.price stats.format name image"
+    // );
+  } catch (err) {
+    const error = new HttpError(err, 500);
+    return next(error);
+  }
+  if (!order) {
+    const error = new HttpError(
+      "No se ha encontrado un usuario para el id proporcionado.",
+      404
+    );
+    return next(error);
+  }
+
+  res.json({ order: order.toObject({ getters: true }) });
+};
+const emptyCartByUserId = async (req, res, next) => {
+  const uid = req.params.uid;
+
+  let user;
+  try {
+    user =  await User.findById(uid); // borrar con referencia
+  } catch (err) {
+    const error = new HttpError(
+      "Something went wrong, could not empty cart.",
+      500
+    );
+    return next(error);
+  }
+
+  if (!user) {
+    const error = new HttpError("Could not find a user for this id", 404); // check si existe el id
+    return next(error);
+  }
+
+  user.cart.cartItem = [];
+
+  try {
+    await user.save();
+    console.log(user.cart.cartItem)
+  } catch (err) {
+    const error = new HttpError("Could not empty the cart", 404); // check si existe el id
+    return next(error);
+  }
+  res.status(200).json({ message: "Empty cart." });
+};
 exports.updateAddress = updateAddress;
 exports.deleteCartItem = deleteCartItem;
 exports.getUserCart = getUserCart;
@@ -937,3 +1257,11 @@ exports.getAuth = getAuth;
 exports.setSeller = setSeller;
 exports.addaddToUserCart = addToUserCart;
 exports.makeOrder = makeOrder;
+exports.getOrders = getOrders;
+exports.getPedido = getPedido;
+exports.getOrdersByVendor = getOrdersByVendor;
+exports.getOrder = getOrder;
+exports.acceptOrder = acceptOrder;
+exports.cancelOrder = cancelOrder;
+exports.getOrdersByClient = getOrdersByClient;
+exports.emptyCartByUserId = emptyCartByUserId;

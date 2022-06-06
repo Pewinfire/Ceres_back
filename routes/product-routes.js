@@ -16,14 +16,15 @@ router.get("/shop/:shid/:page/:size/:sch/:sort/:dir", productControllers.getProd
 
 router.get("/category/:cid", productControllers.getProductByCategoryId);
 
+
+router.use(checkAuth);
 router.patch(
   "/:pid",
-  /* fileUpload.single("image"), */
+  fileUpload.single("image"),
   [check("name").not().isEmpty()], // solo la imagen
   productControllers.updateProductById
 );
 router.delete("/:pid", productControllers.deleteProductById);
-router.use(checkAuth);
 router.patch(
   "/stats/:pid",
   productControllers.updateProductStats

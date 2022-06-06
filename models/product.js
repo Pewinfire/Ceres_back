@@ -17,6 +17,7 @@ const productSchema = new Schema({
     ],
     format: { type: String },
   },
+  iva:{ type: Number },
   carts: [{ type: mongoose.Types.ObjectId, ref: "Cart" }],
   categories: [{ type: mongoose.Types.ObjectId, ref: "Category" }],
   shop: { type: mongoose.Types.ObjectId, required: true, ref: "Shop" },

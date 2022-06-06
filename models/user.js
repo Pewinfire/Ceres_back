@@ -36,6 +36,7 @@ const userSchema = new Schema({
   },
   reviews: [{ type: mongoose.Types.ObjectId, ref: "Review" }],
   orders: [{ type: mongoose.Types.ObjectId, ref: "Order" }],
+  pedidos: [{ type: mongoose.Types.ObjectId, ref: "Pedido" }],
   shop: { type: mongoose.Types.ObjectId, ref: "Shop" },
   rol: { type: mongoose.Types.ObjectId, required: true, ref: "Rol" },
 });

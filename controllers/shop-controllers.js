@@ -13,7 +13,7 @@ const mongoose = require("mongoose");
 const getShops = async (req, res, next) => {
   let shops;
   try {
-    shops = await Shop.find({});
+    shops = await Shop.find({}).populate("owner","name lastname").populate("marketo", "name").select("-products -orders -active -image -reviews");
   } catch (err) {
     const error = new HttpError(
       "Fetching puestos failed, please try again.",

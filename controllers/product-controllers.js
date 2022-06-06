@@ -32,7 +32,7 @@ const getProductById = async (req, res, next) => {
   const productId = req.params.pid;
   let product;
   try {
-    product = await Product.findById(productId);
+    product = await Product.findById(productId).populate("categories");
   } catch (err) {
     const error = new HttpError(
       "Something went wrong, could not find a product",
@@ -228,7 +228,8 @@ const updateProductById = async (req, res, next) => {
     );
   }
   // destructuring del payload
-  const { name, categories, shop } = req.body;
+  const { name, categories, image, description, shop, imageup } = req.body;
+  let categorias= JSON.parse(categories)
   const productId = req.params.pid;
   //busqueda de la tienda que tiene el producto
   let shap;
@@ -265,14 +266,20 @@ const updateProductById = async (req, res, next) => {
   }
 
   product.name = name;
+  product.description = description;
+  const imagePath = product.image;
+  if (imageup === "true") {
+    product.image = req.file.path;
+  }
+
   // busqueda de las categorias segun las categorias que tenga el producto
   try {
-    cats = await Category.find({ _id: { $in: categories } });
+    cats = await Category.find({ _id: { $in: categorias } });
   } catch (err) {
     const error = new HttpError(err, 500);
     return next(error);
   }
-  if (!cats && cats.length === 0 && cats.length !== categories.length) {
+  if (!cats && cats.length === 0 && cats.length !== categorias.length) {
     const error = new HttpError(
       " Could not find a category for provided id",
       404
@@ -282,11 +289,12 @@ const updateProductById = async (req, res, next) => {
 
   // serie de comparaciones de varios arrays de categorias para obtener que categoria desaparecen y cuales aparecen
 
+
   let categoriesFromClient;
   let catAdd;
   let catRemove;
   try {
-    categoriesFromClient = categories.map((c) => mongoose.Types.ObjectId(c));
+    categoriesFromClient = categorias.map((c) => mongoose.Types.ObjectId(c));
     catRemove = await product.categories.filter(
       (cat) => !categoriesFromClient.includes(cat)
     );
@@ -326,6 +334,9 @@ const updateProductById = async (req, res, next) => {
   } catch (err) {
     const error = new HttpError(err, 500);
     return next(error);
+  }
+  if (imageup === "true") {
+    fs.unlink(imagePath, (err) => {});
   }
   // respuesta del producto updateado
   res.status(200).json({ product: product.toObject({ getters: true }) });
@@ -389,7 +400,7 @@ const deleteProductById = async (req, res, next) => {
   } catch (err) {
     const error = new HttpError(
       "Something went wrong, could not delete product.",
-      500
+      
     );
     return next(error);
   }

@@ -20,13 +20,17 @@ const orderSchema = new Schema({
       quantity: { type: Number, required: true },
     },
   ],
-  dateOrder: { type: Date, default: Date.now },
+  dateOrder: { type: Date, default: Date.now},
   billingAddress: {
     address: { type: String, required: true },
     province: { type: String, required: true },
     locality: { type: String, required: true },
     postalCode: { type: String, required: true },
-  }
+  },
+  pedido:{ type: mongoose.Types.ObjectId, required: true, ref: "Pedidos" },
+  aceptado: { type: Boolean, default: false },
+  cancelado: {type: Boolean, default: false},
+  puntuación: {type: Number }
 });
 
 module.exports = mongoose.model("Order", orderSchema);
