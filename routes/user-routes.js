@@ -7,11 +7,16 @@ const fileUpload = require("../middleware/file-upload");
 const router = express.Router();
 
 //users
-router.patch("/emptycart/:uid",usersControllers.emptyCartByUserId)
-router.get("/accept/order/:oid", usersControllers.acceptOrder);
-router.get("/cancel/order/:oid", usersControllers.cancelOrder);
-router.get("/orders/client/:uid/:page/:size/:nam", usersControllers.getOrdersByClient);
-router.get("/orders/vendor/:sid/:page/:size/:nam", usersControllers.getOrdersByVendor);
+router.patch("/emptycart/:uid", usersControllers.emptyCartByUserId);
+
+router.get(
+  "/orders/client/:uid/:page/:size/:nam",
+  usersControllers.getOrdersByClient
+);
+router.get(
+  "/orders/vendor/:sid/:page/:size/:nam",
+  usersControllers.getOrdersByVendor
+);
 router.get("/order/:oid", usersControllers.getOrders);
 router.get("/get/order/:oid", usersControllers.getOrder);
 router.get("/pedido/:pid", usersControllers.getPedido);
@@ -34,11 +39,13 @@ router.post(
 );
 
 router.post("/login", usersControllers.login);
-      router.use(checkAuth);
-      router.get("/getall/:page/:size/:sch/:sort/:dir", usersControllers.getUsers);
-      router.get("/vendors/", usersControllers.getVendors);
-      router.get("/:uid", usersControllers.getUserById);
-      router.get("/auth/checkrol", usersControllers.getAuth);
+router.use(checkAuth);
+router.get("/getall/:page/:size/:sch/:sort/:dir", usersControllers.getUsers);
+router.get("/vendors/", usersControllers.getVendors);
+router.get("/:uid", usersControllers.getUserById);
+router.get("/auth/checkrol", usersControllers.getAuth);
+router.get("/accept/order/:oid", usersControllers.acceptOrder);
+router.get("/cancel/order/:oid", usersControllers.cancelOrder);
 router.patch(
   "/:uid",
   fileUpload.single("image"),

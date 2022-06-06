@@ -9,15 +9,11 @@ const router = express.Router();
 /* 
 router.get("/", marketControllers.getMarkets); */
 
-router.get(
-  "/near/:addr/:page/:size/:nam",
-   marketControllers.getMarketsNear
-);
+router.get("/near/:addr/:page/:size/:nam", marketControllers.getMarketsNear);
 
 router.get("/:mid", marketControllers.getMarketById);
 
 router.get("/name/:page/:size/:nam", marketControllers.getMarkets);
-
 
 router.patch(
   "/:mid",
@@ -30,15 +26,15 @@ router.patch(
   marketControllers.updateMarketById
 );
 
-      router.post(
-        "/",
-        fileUpload.single("image"),
-        [
-          check("name").not().isEmpty(),
-          check("postalCode").isLength(5),
-          check("address").not().isEmpty(),
-        ],
-        marketControllers.createMarket
-      );
+router.post(
+  "/",
+  fileUpload.single("image"),
+  [
+    check("name").not().isEmpty(),
+    check("postalCode").isLength(5),
+    check("address").not().isEmpty(),
+  ],
+  marketControllers.createMarket
+);
 
 module.exports = router;
