@@ -77,7 +77,7 @@ const getMarketsNear = async (req, res, next) => {
   } catch (error) {
     return next(error);
   }
-  console.log(geoJson);
+
   try {
     totalItems = await Market.countDocuments({});
     totalMarkets = await Market.countDocuments({
